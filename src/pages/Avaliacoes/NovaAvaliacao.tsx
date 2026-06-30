@@ -46,7 +46,7 @@ export function NovaAvaliacao() {
       [itemId]: {
         valor,
         observacao: prev[itemId]?.observacao ?? '',
-        obsAberta: prev[itemId]?.obsAberta ?? false,
+        obsAberta: valor !== 3 ? true : (prev[itemId]?.obsAberta ?? false),
       },
     }))
   }
@@ -87,6 +87,12 @@ export function NovaAvaliacao() {
 
     if (respostas.length === 0) {
       setErro('Responda pelo menos um item antes de salvar.')
+      return
+    }
+
+    const semObs = respostas.filter((r) => r.valor !== 3 && !r.observacao?.trim())
+    if (semObs.length > 0) {
+      setErro(`Preencha a observação dos itens marcados como "Não atende" ou "Parcial" (${semObs.length} pendente${semObs.length > 1 ? 's' : ''}).`)
       return
     }
 
@@ -256,27 +262,44 @@ export function NovaAvaliacao() {
                             ))}
                           </div>
 
-                          <div>
-                            <button
-                              type="button"
-                              onClick={() => toggleObs(item.id)}
-                              className="text-xs text-brand-600 hover:underline flex items-center gap-1"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              {st?.obsAberta ? 'Fechar observação' : 'Adicionar observação'}
-                            </button>
-                            {st?.obsAberta && (
+                          {st?.valor != null && st.valor !== 3 ? (
+                            <div>
+                              <p className="text-xs font-medium text-red-500 mb-1.5">
+                                Observação obrigatória *
+                              </p>
                               <textarea
                                 value={st.observacao}
                                 onChange={(e) => setObservacao(item.id, e.target.value)}
-                                placeholder="Observação opcional..."
+                                placeholder="Descreva o que foi observado..."
                                 rows={2}
-                                className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none ${
+                                  !st.observacao.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                               />
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => toggleObs(item.id)}
+                                className="text-xs text-brand-600 hover:underline flex items-center gap-1"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                {st?.obsAberta ? 'Fechar observação' : 'Adicionar observação'}
+                              </button>
+                              {st?.obsAberta && (
+                                <textarea
+                                  value={st?.observacao ?? ''}
+                                  onChange={(e) => setObservacao(item.id, e.target.value)}
+                                  placeholder="Observação opcional..."
+                                  rows={2}
+                                  className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                                />
+                              )}
+                            </div>
+                          )}
                         </div>
                       )
                     })}

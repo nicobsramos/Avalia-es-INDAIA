@@ -11,13 +11,15 @@ import { bgCorClasse, formatarDataBR, formatarMesAno } from '../../utils/notas'
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 
 const VALOR_LABEL: Record<string, string> = {
-  Conforme:      'Conforme',
-  Nao_Conforme:  'Não conforme',
+  Conforme:      'Atende',
+  Nao_Conforme:  'Não atende',
+  Parcial:       'Parcial',
   Nao_Aplicavel: 'N/A',
 }
 const VALOR_BADGE: Record<string, string> = {
   Conforme:      'bg-green-100 text-green-700',
   Nao_Conforme:  'bg-red-100 text-red-700',
+  Parcial:       'bg-orange-100 text-orange-700',
   Nao_Aplicavel: 'bg-gray-100 text-gray-500',
 }
 

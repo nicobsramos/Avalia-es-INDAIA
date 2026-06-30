@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useDashboard } from '../../hooks/useDashboard'
 import { useSegAlimentar } from '../../hooks/useSegAlimentar'
@@ -52,13 +52,13 @@ function useHistoricoNutri(competencia: Competencia, unidadeIds: string[] | null
     queryFn: async () => {
       let q = (supabase as any)
         .from('nutri_avaliacoes')
-        .select('id, data_visita, unidade_id, unidades(nome)')
+        .select('id, data_visita, unidade_id, unidades(nome), relatorio_pdf_url')
         .eq('competencia_mes', competencia.mes)
         .eq('competencia_ano', competencia.ano)
         .order('data_visita', { ascending: false })
       if (unidadeIds) q = q.in('unidade_id', unidadeIds)
       const { data } = await q
-      return (data ?? []) as { id: string; data_visita: string; unidade_id: string; unidades: { nome: string } }[]
+      return (data ?? []) as { id: string; data_visita: string; unidade_id: string; unidades: { nome: string }; relatorio_pdf_url: string | null }[]
     },
     staleTime: 1000 * 60 * 2,
   })
@@ -114,8 +114,57 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
 
 
 // ── Histórico Nutri DB ────────────────────────────────────────────────────────
+const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
+
 function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
+  const { user } = useAuth()
+  const isJulia = user?.email === JULIA_EMAIL
+  const queryClient = useQueryClient()
   const { data: avaliacoes, isLoading } = useHistoricoNutri(competencia, unidadeIds)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  async function handleDelete(avaliacaoId: string) {
+    if (!confirm('Apagar o PDF desta avaliação?')) return
+    setDeleting(avaliacaoId)
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      const res = await fetch('/api/nutri-pdf', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avaliacaoId }),
+      })
+      if (!res.ok) { alert('Erro ao apagar PDF.'); return }
+      queryClient.invalidateQueries({ queryKey: ['historico-nutri'] })
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  async function handleUpload(avaliacaoId: string, file: File) {
+    setUploading(avaliacaoId)
+    try {
+      const path = `${avaliacaoId}.pdf`
+      const { error: uploadError } = await supabase.storage
+        .from('nutri-relatorios')
+        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+      if (uploadError) { alert('Erro ao enviar arquivo: ' + uploadError.message); return }
+
+      const { data: { publicUrl } } = supabase.storage.from('nutri-relatorios').getPublicUrl(path)
+
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      const res = await fetch('/api/nutri-pdf', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avaliacaoId, pdfUrl: publicUrl }),
+      })
+      if (!res.ok) { alert('Erro ao salvar referência do PDF.'); return }
+
+      queryClient.invalidateQueries({ queryKey: ['historico-nutri'] })
+    } finally {
+      setUploading(null)
+    }
+  }
 
   if (isLoading) return <div className="p-4"><LoadingSpinner text="Carregando..." /></div>
   if (!avaliacoes || avaliacoes.length === 0)
@@ -125,20 +174,83 @@ function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competenci
     <div className="divide-y divide-gray-100">
       {avaliacoes.map((av) => {
         const dataFmt = av.data_visita.split('-').reverse().join('/')
+        const isUploading = uploading === av.id
         return (
-          <Link
-            key={av.id}
-            to={`/seg-alimentar/${av.id}`}
-            className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3 min-w-0">
+          <div key={av.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
+            <Link to={`/seg-alimentar/${av.id}`} className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-xs text-gray-400 shrink-0 font-medium">{dataFmt}</span>
               <span className="text-sm font-semibold text-gray-800 truncate">{av.unidades?.nome ?? '—'}</span>
+            </Link>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {av.relatorio_pdf_url && (
+                <a
+                  href={av.relatorio_pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-1 rounded-lg transition-colors font-medium"
+                  title="Ver relatório PDF"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                  PDF
+                </a>
+              )}
+
+              {isJulia && (
+                <label
+                  className={`flex items-center gap-1 text-xs cursor-pointer px-2 py-1 rounded-lg border transition-colors font-medium ${
+                    isUploading
+                      ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
+                      : 'text-brand-600 bg-brand-50 hover:bg-brand-100 border-brand-200'
+                  }`}
+                  title={av.relatorio_pdf_url ? 'Substituir PDF' : 'Subir PDF'}
+                >
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleUpload(av.id, f)
+                      e.target.value = ''
+                    }}
+                  />
+                  {isUploading ? '…' : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {av.relatorio_pdf_url ? 'Trocar' : 'Subir'}
+                    </>
+                  )}
+                </label>
+              )}
+
+              {isJulia && av.relatorio_pdf_url && (
+                <button
+                  disabled={deleting === av.id}
+                  onClick={() => handleDelete(av.id)}
+                  className="flex items-center gap-1 text-xs text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-1 rounded-lg transition-colors font-medium disabled:opacity-50"
+                  title="Apagar PDF"
+                >
+                  {deleting === av.id ? '…' : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )}
+                </button>
+              )}
+
+              <Link to={`/seg-alimentar/${av.id}`} className="shrink-0">
+                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
-            <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          </div>
         )
       })}
     </div>

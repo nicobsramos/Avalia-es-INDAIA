@@ -27,7 +27,7 @@ export interface NutriAvaliacaoRow {
   usuario_nome: string
 }
 
-export type ValorNutri = 'Conforme' | 'Nao_Conforme' | 'Nao_Aplicavel'
+export type ValorNutri = 'Conforme' | 'Nao_Conforme' | 'Parcial' | 'Nao_Aplicavel'
 
 export interface NutriResposta {
   id: string
@@ -41,6 +41,7 @@ export interface NotaAreaNutri {
   area: 'Cozinha' | 'Bar' | 'Atendimento'
   nota: number | null
   conforme: number
+  parcial: number
   nao_conforme: number
   nao_aplicavel: number
   total: number
@@ -136,6 +137,7 @@ export function useNutriReport(competencia: Competencia) {
         if (r.valor !== 'Nao_Aplicavel') {
           byUni[uid][area].total++
           if (r.valor === 'Conforme') byUni[uid][area].conforme++
+          else if (r.valor === 'Parcial') byUni[uid][area].conforme += 0.5
         }
       }
 
@@ -232,10 +234,12 @@ export function useNutriDetalhe(id: string) {
       const notasPorArea: NotaAreaNutri[] = areas.map((area) => {
         const rsArea = rs.filter((r) => itemAreaMap[r.item_id] === area)
         const conforme = rsArea.filter((r) => r.valor === 'Conforme').length
+        const parcial = rsArea.filter((r) => r.valor === 'Parcial').length
         const nao_conforme = rsArea.filter((r) => r.valor === 'Nao_Conforme').length
         const nao_aplicavel = rsArea.filter((r) => r.valor === 'Nao_Aplicavel').length
-        const total = conforme + nao_conforme
-        return { area, nota: calcNota(conforme, total), conforme, nao_conforme, nao_aplicavel, total }
+        const total = conforme + parcial + nao_conforme
+        const pontos = conforme + parcial * 0.5
+        return { area, nota: calcNota(pontos, total), conforme, parcial, nao_conforme, nao_aplicavel, total }
       })
 
       const notasValidas = notasPorArea.map((n) => n.nota).filter((n): n is number => n !== null)

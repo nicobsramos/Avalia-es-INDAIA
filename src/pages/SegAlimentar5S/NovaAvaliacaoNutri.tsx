@@ -13,13 +13,15 @@ type Area = typeof AREAS[number]
 const COR_VALOR: Record<ValorNutri, string> = {
   Conforme:      'bg-green-500 text-white border-green-500',
   Nao_Conforme:  'bg-red-500 text-white border-red-500',
+  Parcial:       'bg-orange-400 text-white border-orange-400',
   Nao_Aplicavel: 'bg-gray-400 text-white border-gray-400',
 }
 const COR_INATIVO = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
 
 const LABEL_VALOR: Record<ValorNutri, string> = {
-  Conforme:      'Conforme',
-  Nao_Conforme:  'Não conforme',
+  Conforme:      'Atende',
+  Nao_Conforme:  'Não atende',
+  Parcial:       'Parcial',
   Nao_Aplicavel: 'N/A',
 }
 
@@ -53,7 +55,7 @@ export function NovaAvaliacaoNutri() {
       [itemId]: {
         valor,
         observacao: prev[itemId]?.observacao ?? '',
-        obsAberta: prev[itemId]?.obsAberta ?? false,
+        obsAberta: valor !== 'Conforme' ? true : (prev[itemId]?.obsAberta ?? false),
       },
     }))
   }
@@ -81,6 +83,12 @@ export function NovaAvaliacaoNutri() {
     const total = Object.values(estado).filter((s) => s.valor != null).length
     if (total === 0) {
       setErro('Responda pelo menos um item antes de salvar.')
+      return
+    }
+
+    const semObs = Object.values(estado).filter((s) => s.valor != null && s.valor !== 'Conforme' && !s.observacao.trim())
+    if (semObs.length > 0) {
+      setErro(`Preencha a observação dos itens marcados como "Não conforme" ou "N/A" (${semObs.length} pendente${semObs.length > 1 ? 's' : ''}).`)
       return
     }
 
@@ -263,8 +271,8 @@ export function NovaAvaliacaoNutri() {
                   <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
                     <p className="text-sm text-gray-800 leading-snug">{item.descricao}</p>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['Conforme', 'Nao_Conforme', 'Nao_Aplicavel'] as ValorNutri[]).map((v) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['Conforme', 'Nao_Conforme', 'Parcial', 'Nao_Aplicavel'] as ValorNutri[]).map((v) => (
                         <button
                           key={v}
                           type="button"
@@ -278,29 +286,53 @@ export function NovaAvaliacaoNutri() {
                       ))}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => toggleObs(item.id)}
-                      className="text-xs text-brand-600 hover:underline flex items-center gap-1"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      {st?.obsAberta ? 'Fechar' : 'Observação'}
-                    </button>
-                    {st?.obsAberta && (
-                      <textarea
-                        value={st.observacao}
-                        onChange={(e) =>
-                          setEstado((prev) => ({
-                            ...prev,
-                            [item.id]: { ...prev[item.id], observacao: e.target.value },
-                          }))
-                        }
-                        placeholder="Observação sobre este item..."
-                        rows={2}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
-                      />
+                    {st?.valor != null && st.valor !== 'Conforme' ? (
+                      <div>
+                        <p className="text-xs font-medium text-red-500 mb-1.5">
+                          Observação obrigatória *
+                        </p>
+                        <textarea
+                          value={st.observacao}
+                          onChange={(e) =>
+                            setEstado((prev) => ({
+                              ...prev,
+                              [item.id]: { ...prev[item.id], observacao: e.target.value },
+                            }))
+                          }
+                          placeholder="Descreva o que foi observado..."
+                          rows={2}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none ${
+                            !st.observacao.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => toggleObs(item.id)}
+                          className="text-xs text-brand-600 hover:underline flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          {st?.obsAberta ? 'Fechar' : 'Observação'}
+                        </button>
+                        {st?.obsAberta && (
+                          <textarea
+                            value={st?.observacao ?? ''}
+                            onChange={(e) =>
+                              setEstado((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], observacao: e.target.value },
+                              }))
+                            }
+                            placeholder="Observação sobre este item..."
+                            rows={2}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 )
