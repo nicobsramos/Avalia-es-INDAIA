@@ -15,6 +15,9 @@ import { SegAlimentar5S } from './pages/SegAlimentar5S'
 import { NovaAvaliacaoNutri } from './pages/SegAlimentar5S/NovaAvaliacaoNutri'
 import { DetalheAvaliacaoNutri } from './pages/SegAlimentar5S/DetalheAvaliacaoNutri'
 import { AdminSolicitacoes } from './pages/Admin/Solicitacoes'
+import { ChecklistDiario } from './pages/ChecklistDiario'
+import { NovoChecklist } from './pages/ChecklistDiario/NovoChecklist'
+import { DetalheChecklist } from './pages/ChecklistDiario/DetalheChecklist'
 import { LoadingSpinner } from './components/LoadingSpinner'
 
 // Keep in sync with api/admin-solicitacoes.ts ADMIN_EMAIL
@@ -62,6 +65,9 @@ function AppRoutes() {
           <Route path="avaliacoes" element={<Avaliacoes />} />
           <Route path="avaliacoes/nova" element={<SoEscrita><NovaAvaliacao /></SoEscrita>} />
           <Route path="avaliacoes/:id" element={<DetalheAvaliacao />} />
+          <Route path="checklist-diario" element={<ChecklistDiario />} />
+          <Route path="checklist-diario/novo" element={<NovoChecklist />} />
+          <Route path="checklist-diario/:id" element={<DetalheChecklist />} />
           {user?.email === ADMIN_EMAIL && (
             <Route path="admin/solicitacoes" element={<AdminSolicitacoes />} />
           )}

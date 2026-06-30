@@ -426,6 +426,7 @@ export function Avaliacoes() {
 
       {loadOp ? <LoadingSpinner text="Carregando visitas..." /> : (
         <>
+          {(perfil?.role === 'rede' || setoresPermitidos.length > 0) && (
           <SecaoColapsavel titulo="Operacional" meta="meta: 2/mês · NV: 1">
             {notasVisiveis.map((nu) => {
               const meta = metaOperacional(nu.unidade_nome)
@@ -454,7 +455,9 @@ export function Avaliacoes() {
               )
             })}
           </SecaoColapsavel>
+          )}
 
+          {(perfil?.role === 'rede' || podeNutri) && (
           <SecaoColapsavel titulo="Seg. Alimentar & 5S" meta="meta: 4/mês · Nova Veneza: 1">
             {notasVisiveis.map((nu) => {
               const meta = metaNutri(nu.unidade_nome)
@@ -472,6 +475,7 @@ export function Avaliacoes() {
               )
             })}
           </SecaoColapsavel>
+          )}
 
           <HistoricoAvaliacoes competencia={competencia} unidadeIds={unidadeIdsPermitidas} />
         </>

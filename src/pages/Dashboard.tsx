@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useCompetencia } from '../context/CompetenciaContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useSegAlimentar } from '../hooks/useSegAlimentar'
+import { useNutriReport } from '../hooks/useNutriAvaliacoes'
+import { useChecklistCompliance, diasDecorridosSemana } from '../hooks/useChecklistDiario'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
 import { bgCorClasse, corClasse, formatarNota, variacaoSeta, variacaoCorClasse } from '../utils/notas'
 import type { NotaUnidade, Competencia } from '../types'
+import { notaRede2524 } from '../utils/sheetsParser'
 import type { NotaOperacao } from '../utils/sheetsParser'
 
 const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento']
@@ -102,10 +106,84 @@ function SecaoHeader({ label, nota, variacao }: { label: string; nota: number | 
   )
 }
 
+function CardChecklistCompliance({ unidade_id, unidade_nome, abertura, fechamento, dias_operacao_semana }: {
+  unidade_id: string
+  unidade_nome: string
+  abertura: number
+  fechamento: number
+  dias_operacao_semana: number
+}) {
+  const diasDecorridos = diasDecorridosSemana()
+  const esperado = Math.min(diasDecorridos, dias_operacao_semana)
+
+  function corBarra(count: number) {
+    if (count >= esperado) return 'bg-green-500'
+    if (count > 0) return 'bg-yellow-400'
+    return 'bg-red-400'
+  }
+
+  function corTexto(count: number) {
+    if (count >= esperado) return 'text-green-600'
+    if (count > 0) return 'text-yellow-600'
+    return 'text-red-500'
+  }
+
+  return (
+    <Link
+      to={`/checklist-diario?unidade_id=${unidade_id}`}
+      className="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm transition-all hover:shadow-md hover:border-brand-400"
+    >
+      <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-3">{unidade_nome}</h3>
+      <div className="space-y-2">
+        {(['abertura', 'fechamento'] as const).map((tipo) => {
+          const count = tipo === 'abertura' ? abertura : fechamento
+          const pct = esperado > 0 ? Math.min(count / esperado, 1) : 0
+          return (
+            <div key={tipo}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-xs text-gray-400 capitalize">{tipo === 'abertura' ? 'Abertura' : 'Fechamento'}</span>
+                <span className={`text-xs font-bold ${corTexto(count)}`}>
+                  {count}/{esperado}
+                </span>
+              </div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${corBarra(count)}`}
+                  style={{ width: `${pct * 100}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </Link>
+  )
+}
+
 export function Dashboard() {
   const { competencia } = useCompetencia()
   const { notasUnidades, notaRede, variacao, loading: loadOp, error: errOp } = useDashboard(competencia)
-  const { rows, notaRede: notaRedeNutri, loading: loadNutri, error: errNutri } = useSegAlimentar(competencia)
+  const { rows: sheetsRows, loading: loadNutriSheets, error: errNutri } = useSegAlimentar(competencia)
+  const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia)
+  const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance()
+
+  // Merge DB (primary) + Sheets (fallback for units not in DB)
+  const rows = useMemo<NotaOperacao[]>(() => {
+    const dbRows: NotaOperacao[] = (dbNutri ?? []).map((u) => ({
+      unidade: u.unidade_nome,
+      Cozinha: u.Cozinha,
+      Bar: u.Bar,
+      Atendimento: u.Atendimento,
+      consolidado: u.consolidado,
+      visitas: u.visitas,
+    }))
+    const dbNames = new Set(dbRows.map((r) => r.unidade.toLowerCase()))
+    const extraSheets = sheetsRows.filter((r) => !dbNames.has(r.unidade.toLowerCase()))
+    return [...dbRows, ...extraSheets].sort((a, b) => a.unidade.localeCompare(b.unidade))
+  }, [dbNutri, sheetsRows])
+
+  const notaRedeNutri = useMemo(() => notaRede2524(rows), [rows])
+  const loadNutri = loadNutriSheets || loadNutriDB
   const [modal, setModal] = useState<ModalState>(null)
 
   const unidadesComDados = notasUnidades.filter((nu) =>
@@ -154,6 +232,25 @@ export function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {rows.map((row) => (
               <CardNutri key={row.unidade} row={row} onClick={() => setModal({ tipo: 'nutri', row })} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* CHECKLIST DIÁRIO */}
+      <section>
+        <SecaoHeader label="Checklist Diário — Cozinha" nota={null} />
+        <p className="text-xs text-gray-400 -mt-2 mb-3">Preenchimentos desta semana (seg → hoje)</p>
+        {loadCompliance ? (
+          <LoadingSpinner text="Carregando..." />
+        ) : (compliance ?? []).length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            Nenhuma unidade com checklist configurado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {(compliance ?? []).map((u) => (
+              <CardChecklistCompliance key={u.unidade_id} {...u} />
             ))}
           </div>
         )}
