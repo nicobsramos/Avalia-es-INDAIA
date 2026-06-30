@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useCompetencia } from '../context/CompetenciaContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useSegAlimentar } from '../hooks/useSegAlimentar'
+import { useNutriReport } from '../hooks/useNutriAvaliacoes'
 import { useChecklistCompliance, diasDecorridosSemana } from '../hooks/useChecklistDiario'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
 import { bgCorClasse, corClasse, formatarNota, variacaoSeta, variacaoCorClasse } from '../utils/notas'
 import type { NotaUnidade, Competencia } from '../types'
+import { notaRede2524 } from '../utils/sheetsParser'
 import type { NotaOperacao } from '../utils/sheetsParser'
 
 const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento']
@@ -161,8 +163,27 @@ function CardChecklistCompliance({ unidade_id, unidade_nome, abertura, fechament
 export function Dashboard() {
   const { competencia } = useCompetencia()
   const { notasUnidades, notaRede, variacao, loading: loadOp, error: errOp } = useDashboard(competencia)
-  const { rows, notaRede: notaRedeNutri, loading: loadNutri, error: errNutri } = useSegAlimentar(competencia)
+  const { rows: sheetsRows, loading: loadNutriSheets, error: errNutri } = useSegAlimentar(competencia)
+  const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia)
   const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance()
+
+  // Merge DB (primary) + Sheets (fallback for units not in DB)
+  const rows = useMemo<NotaOperacao[]>(() => {
+    const dbRows: NotaOperacao[] = (dbNutri ?? []).map((u) => ({
+      unidade: u.unidade_nome,
+      Cozinha: u.Cozinha,
+      Bar: u.Bar,
+      Atendimento: u.Atendimento,
+      consolidado: u.consolidado,
+      visitas: u.visitas,
+    }))
+    const dbNames = new Set(dbRows.map((r) => r.unidade.toLowerCase()))
+    const extraSheets = sheetsRows.filter((r) => !dbNames.has(r.unidade.toLowerCase()))
+    return [...dbRows, ...extraSheets].sort((a, b) => a.unidade.localeCompare(b.unidade))
+  }, [dbNutri, sheetsRows])
+
+  const notaRedeNutri = useMemo(() => notaRede2524(rows), [rows])
+  const loadNutri = loadNutriSheets || loadNutriDB
   const [modal, setModal] = useState<ModalState>(null)
 
   const unidadesComDados = notasUnidades.filter((nu) =>
