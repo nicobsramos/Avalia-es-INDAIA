@@ -397,7 +397,7 @@ export function Avaliacoes() {
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
 
-  const { notasUnidades, visitCounts, sectorVisitCounts, loading: loadOp } = useDashboard(competencia)
+  const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia)
   const { data: nutriCounts = {} } = useNutriCounts(competencia)
   const { rows: sheetsRows } = useSegAlimentar(competencia)
 
@@ -464,17 +464,11 @@ export function Avaliacoes() {
             {notasVisiveis.map((nu) => {
               const meta = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
-              const feitas = setoresPermitidos.length > 0
-                ? Math.min(...setoresPermitidos.map((s) => counts[s] ?? 0))
-                : (visitCounts[nu.unidade_id] ?? 0)
               const setores = nu.notas_setores.filter((ns) => SETORES_OP.includes(ns.setor_nome))
               return (
                 <div key={nu.unidade_id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <span className="text-sm font-semibold text-gray-900 truncate">{nu.unidade_nome}</span>
-                    <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full border ${badgeCls(feitas, meta)}`}>
-                      {feitas}/{meta}
-                    </span>
+                  <div className="mb-2">
+                    <span className="text-sm font-semibold text-gray-900">{nu.unidade_nome}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {setores.map((ns) => {
