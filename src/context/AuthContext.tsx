@@ -49,32 +49,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const meta = session.user.user_metadata as { must_change_password?: boolean }
-        setMustChangePassword(!!meta?.must_change_password)
-        await carregarPerfil(session.user.id)
-      }
-      setLoading(false)
-    })
+    // Fallback: se algo travar (rede lenta, erro silencioso), desbloqueia em 10s
+    const timeout = setTimeout(() => setLoading(false), 10_000)
+
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          const meta = session.user.user_metadata as { must_change_password?: boolean }
+          setMustChangePassword(!!meta?.must_change_password)
+          try { await carregarPerfil(session.user.id) } catch { /* perfil indisponível, segue */ }
+        }
+      })
+      .catch(() => { /* getSession falhou, trata como sem sessão */ })
+      .finally(() => {
+        clearTimeout(timeout)
+        setLoading(false)
+      })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         const meta = session.user.user_metadata as { must_change_password?: boolean }
-        // recovery link sempre pede nova senha
         setMustChangePassword(event === 'PASSWORD_RECOVERY' || !!meta?.must_change_password)
-        await carregarPerfil(session.user.id)
+        try { await carregarPerfil(session.user.id) } catch { /* perfil indisponível */ }
       } else {
         setPerfil(null)
         setMustChangePassword(false)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signIn(email: string, password: string) {

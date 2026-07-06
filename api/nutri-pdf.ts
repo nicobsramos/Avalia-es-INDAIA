@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
+const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 
 async function getCallerEmail(req: any, admin: any): Promise<string | null> {
   const auth = req.headers['authorization']
@@ -18,7 +19,7 @@ export default async function handler(req: any, res: any) {
 
   const admin = createClient(supabaseUrl, serviceKey)
   const callerEmail = await getCallerEmail(req, admin)
-  if (callerEmail !== JULIA_EMAIL) return res.status(403).json({ error: 'Acesso negado' })
+  if (callerEmail !== JULIA_EMAIL && callerEmail !== ADMIN_EMAIL) return res.status(403).json({ error: 'Acesso negado' })
 
   if (req.method === 'PATCH') {
     const { avaliacaoId, pdfUrl } = req.body ?? {}

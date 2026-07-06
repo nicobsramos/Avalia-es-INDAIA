@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const ADMIN_EMAIL  = 'n.ramos.indaia@gmail.com'
+const JULIA_EMAIL  = 'nutrijuliamafra@gmail.com'
 
 async function getCallerEmail(req: any, admin: any): Promise<string | null> {
   const auth = req.headers['authorization']
@@ -25,9 +26,12 @@ export default async function handler(req: any, res: any) {
   const admin = createClient(supabaseUrl, serviceKey)
 
   const callerEmail = await getCallerEmail(req, admin)
-  if (callerEmail !== ADMIN_EMAIL) return res.status(403).json({ error: 'Acesso negado' })
+  const { tipo } = req.query as Record<string, string>
+  const isAdmin = callerEmail === ADMIN_EMAIL
+  const isJuliaNutri = callerEmail === JULIA_EMAIL && tipo === 'nutri'
+  if (!isAdmin && !isJuliaNutri) return res.status(403).json({ error: 'Acesso negado' })
 
-  const { id, tipo } = req.query as Record<string, string>
+  const { id } = req.query as Record<string, string>
   if (!id || (tipo !== 'operacional' && tipo !== 'nutri'))
     return res.status(400).json({ error: 'Parâmetros inválidos' })
 

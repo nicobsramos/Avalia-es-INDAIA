@@ -115,14 +115,32 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
 
 // ── Histórico Nutri DB ────────────────────────────────────────────────────────
 const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
+const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 
 function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
   const { user } = useAuth()
-  const isJulia = user?.email === JULIA_EMAIL
+  const isJulia = user?.email === JULIA_EMAIL || user?.email === ADMIN_EMAIL
   const queryClient = useQueryClient()
   const { data: avaliacoes, isLoading } = useHistoricoNutri(competencia, unidadeIds)
   const [uploading, setUploading] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [deletingAv, setDeletingAv] = useState<string | null>(null)
+
+  async function handleDeleteAvaliacao(avaliacaoId: string) {
+    if (!confirm('Apagar este lançamento inteiro? Esta ação não pode ser desfeita.')) return
+    setDeletingAv(avaliacaoId)
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      const res = await fetch(`/api/admin-avaliacao?id=${avaliacaoId}&tipo=nutri`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) { alert('Erro ao apagar lançamento.'); return }
+      queryClient.invalidateQueries({ queryKey: ['historico-nutri'] })
+    } finally {
+      setDeletingAv(null)
+    }
+  }
 
   async function handleDelete(avaliacaoId: string) {
     if (!confirm('Apagar o PDF desta avaliação?')) return
@@ -237,6 +255,21 @@ function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competenci
                   title="Apagar PDF"
                 >
                   {deleting === av.id ? '…' : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )}
+                </button>
+              )}
+
+              {isJulia && (
+                <button
+                  disabled={deletingAv === av.id}
+                  onClick={() => handleDeleteAvaliacao(av.id)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 hover:border-red-200 px-2 py-1 rounded-lg transition-colors font-medium disabled:opacity-50"
+                  title="Apagar lançamento"
+                >
+                  {deletingAv === av.id ? '…' : (
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
@@ -427,7 +460,7 @@ export function Avaliacoes() {
       {loadOp ? <LoadingSpinner text="Carregando visitas..." /> : (
         <>
           {(perfil?.role === 'rede' || setoresPermitidos.length > 0) && (
-          <SecaoColapsavel titulo="Operacional" meta="meta: 2/mês · NV: 1">
+          <SecaoColapsavel titulo="Operacional" meta="visitas/mês por setor">
             {notasVisiveis.map((nu) => {
               const meta = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
@@ -444,12 +477,21 @@ export function Avaliacoes() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {setores.map((ns) => (
-                      <div key={ns.setor_id} className="text-center bg-gray-50 rounded-lg py-1.5 px-1">
-                        <p className="text-xs text-gray-400 mb-0.5">{ns.setor_rotulo}</p>
-                        <span className={`text-sm font-bold ${corClasse(ns.nota)}`}>{formatarNota(ns.nota)}</span>
-                      </div>
-                    ))}
+                    {setores.map((ns) => {
+                      const sectorCount = counts[ns.setor_nome] ?? 0
+                      return (
+                        <div key={ns.setor_id} className="text-center bg-gray-50 rounded-lg py-1.5 px-1">
+                          <p className="text-xs text-gray-400 mb-0.5">{ns.setor_rotulo}</p>
+                          <span className={`text-sm font-bold ${corClasse(ns.nota)}`}>{formatarNota(ns.nota)}</span>
+                          <p className={`text-xs font-semibold mt-0.5 ${
+                            meta === 0 ? 'text-gray-400'
+                            : sectorCount >= meta ? 'text-green-600'
+                            : sectorCount > 0    ? 'text-orange-500'
+                            : 'text-red-500'
+                          }`}>{sectorCount}/{meta}</p>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
