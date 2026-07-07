@@ -8,6 +8,7 @@ interface AuthContextValue {
   user: User | null
   perfil: Usuario | null
   loading: boolean
+  perfilReady: boolean
   mustChangePassword: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -21,64 +22,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [perfil, setPerfil] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
+  const [perfilReady, setPerfilReady] = useState(false)
   const [mustChangePassword, setMustChangePassword] = useState(false)
 
   async function carregarPerfil(userId: string) {
-    const { data } = await supabase
-      .from('usuarios')
-      .select('id, nome, role, setores_avaliacao, pode_nutri, status, unidades_ids')
-      .eq('id', userId)
-      .single()
-    if (data) {
-      setPerfil(data as Usuario)
-      return
-    }
-    // Fallback: coluna status/unidades_ids ainda não existe no banco
-    const { data: fallback } = await supabase
-      .from('usuarios')
-      .select('id, nome, role, setores_avaliacao, pode_nutri')
-      .eq('id', userId)
-      .single()
-    if (fallback) {
-      // leitura users are created post-migration, so if the fallback fires for one it means
-      // the schema is inconsistent — default to 'pendente' (deny access) rather than grant it.
-      const fallbackRole = (fallback as any).role as string
-      const safeStatus = fallbackRole === 'leitura' ? 'pendente' : 'ativo'
-      setPerfil({ ...(fallback as any), status: safeStatus, unidades_ids: null } as Usuario)
+    try {
+      const deadline = <T,>(ms: number) => new Promise<T | null>((resolve) => setTimeout(() => resolve(null), ms))
+
+      const resultado = await Promise.race([
+        supabase
+          .from('usuarios')
+          .select('id, nome, role, setores_avaliacao, pode_nutri, status, unidades_ids')
+          .eq('id', userId)
+          .single()
+          .then((r) => r.data),
+        deadline(8_000),
+      ])
+
+      if (resultado) {
+        setPerfil(resultado as Usuario)
+        return
+      }
+
+      // Fallback: tenta sem as colunas novas (status, unidades_ids)
+      const fallbackData = await Promise.race([
+        supabase
+          .from('usuarios')
+          .select('id, nome, role, setores_avaliacao, pode_nutri')
+          .eq('id', userId)
+          .single()
+          .then((r) => r.data),
+        deadline(5_000),
+      ])
+
+      if (fallbackData) {
+        const fallbackRole = (fallbackData as any).role as string
+        const safeStatus = fallbackRole === 'leitura' ? 'pendente' : 'ativo'
+        setPerfil({ ...(fallbackData as any), status: safeStatus, unidades_ids: null } as Usuario)
+      }
+    } finally {
+      // Sempre marca como pronto — mesmo se ambas as queries falharem/travarem
+      setPerfilReady(true)
     }
   }
 
   useEffect(() => {
-    // Fallback: se algo travar (rede lenta, erro silencioso), desbloqueia em 10s
-    const timeout = setTimeout(() => setLoading(false), 10_000)
+    let initialized = false
 
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          const meta = session.user.user_metadata as { must_change_password?: boolean }
-          setMustChangePassword(!!meta?.must_change_password)
-          try { await carregarPerfil(session.user.id) } catch { /* perfil indisponível, segue */ }
-        }
-      })
-      .catch(() => { /* getSession falhou, trata como sem sessão */ })
-      .finally(() => {
-        clearTimeout(timeout)
+    // Desbloqueia o loading na primeira chamada — só ocorre uma vez
+    function markInit() {
+      if (!initialized) {
+        initialized = true
         setLoading(false)
-      })
+      }
+    }
 
+    // Segurança: se nenhum evento chegar em 4s, desbloqueia de qualquer forma
+    const timeout = setTimeout(markInit, 4_000)
+
+    // onAuthStateChange dispara INITIAL_SESSION imediatamente do localStorage,
+    // sem chamada de rede — é a fonte mais rápida para o estado inicial da sessão.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+
       if (session?.user) {
         const meta = session.user.user_metadata as { must_change_password?: boolean }
         setMustChangePassword(event === 'PASSWORD_RECOVERY' || !!meta?.must_change_password)
-        try { await carregarPerfil(session.user.id) } catch { /* perfil indisponível */ }
+        // Carrega perfil em background — não bloqueia o loading
+        carregarPerfil(session.user.id).catch(() => setPerfilReady(true))
       } else {
         setPerfil(null)
+        setPerfilReady(true)
         setMustChangePassword(false)
       }
+
+      // Primeiro evento (INITIAL_SESSION) desbloqueia a tela imediatamente
+      markInit()
     })
 
     return () => {
@@ -106,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, perfil, loading, mustChangePassword, signIn, signOut, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, perfil, loading, perfilReady, mustChangePassword, signIn, signOut, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

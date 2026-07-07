@@ -36,9 +36,9 @@ const queryClient = new QueryClient({
 })
 
 function AppRoutes() {
-  const { session, loading, mustChangePassword, perfil, user } = useAuth()
+  const { session, loading, perfilReady, mustChangePassword, perfil, user } = useAuth()
 
-  if (loading) {
+  if (loading || (session && !perfilReady)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner text="Verificando sessão..." />
