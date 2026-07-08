@@ -166,14 +166,17 @@ export function useNutriReport(competencia: Competencia) {
   })
 }
 
-export function useNutriAvaliacoesList() {
+export function useNutriAvaliacoesList(unidadeIds?: string[] | null) {
   return useQuery({
-    queryKey: ['nutri-avaliacoes'],
+    queryKey: ['nutri-avaliacoes', unidadeIds],
     queryFn: async (): Promise<NutriAvaliacaoRow[]> => {
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from('nutri_avaliacoes')
         .select('id, usuario_id, unidade_id, data_visita, competencia_mes, competencia_ano, lideres_presentes, criado_em, unidades(nome)')
         .order('criado_em', { ascending: false })
+      if (unidadeIds && unidadeIds.length > 0) q = q.in('unidade_id', unidadeIds)
+      const { data, error } = await q
       if (error) throw error
       type Row = NutriAvaliacaoRow & { unidades: { nome: string } | null }
       return ((data ?? []) as unknown as Row[]).map((r) => ({

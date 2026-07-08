@@ -90,8 +90,10 @@ function CardUnidadeHoje({
 
 function ViewLider() {
   const navigate = useNavigate()
-  const { data: unidades, isLoading: loadUnidades } = useUnidades()
-  const { data: lista, isLoading: loadLista, error } = useChecklistList()
+  const { perfil } = useAuth()
+  const unidadeIds = perfil?.role !== 'rede' ? (perfil?.unidades_ids ?? []) : undefined
+  const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds)
+  const { data: lista, isLoading: loadLista, error } = useChecklistList(unidadeIds)
 
   if (loadUnidades || loadLista) return <LoadingSpinner text="Carregando..." />
   if (error) return (

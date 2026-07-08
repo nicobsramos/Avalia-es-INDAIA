@@ -431,13 +431,13 @@ export function Avaliacoes() {
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
 
-  const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia)
+  // Filtro por unidade para qualquer role que não seja 'rede'
+  const isRestrito = perfil?.role !== 'rede'
+  const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
+
+  const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia, unidadeIdsPermitidas)
   const { data: nutriCounts = {} } = useNutriCounts(competencia)
   const { rows: sheetsRows } = useSegAlimentar(competencia)
-
-  // Filtro por unidade para usuários com role='leitura'
-  const isLeitura = perfil?.role === 'leitura'
-  const unidadeIdsPermitidas: string[] | null = isLeitura ? (perfil?.unidades_ids ?? []) : null
 
   const notasVisiveis = unidadeIdsPermitidas
     ? notasUnidades.filter((nu) => unidadeIdsPermitidas.includes(nu.unidade_id))

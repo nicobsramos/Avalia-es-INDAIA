@@ -45,15 +45,14 @@ export function useChecklist() {
   })
 }
 
-export function useUnidades() {
+export function useUnidades(unidadeIds?: string[] | null) {
   return useQuery({
-    queryKey: ['unidades'],
+    queryKey: ['unidades', unidadeIds],
     queryFn: async (): Promise<Unidade[]> => {
-      const { data, error } = await supabase
-        .from('unidades')
-        .select('*')
-        .eq('ativo', true)
-        .order('nome')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any).from('unidades').select('*').eq('ativo', true).order('nome')
+      if (unidadeIds && unidadeIds.length > 0) q = q.in('id', unidadeIds)
+      const { data, error } = await q
       if (error) throw error
       return (data ?? []) as Unidade[]
     },

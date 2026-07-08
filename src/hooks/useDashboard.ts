@@ -12,15 +12,23 @@ interface UnidadeRow { id: string; nome: string }
 interface RespostaRow { setor_id: string; valor: number; avaliacao_id: string }
 interface AvaliacaoRow { id: string; unidade_id: string }
 
-async function fetchDashboardData(c: Competencia) {
+async function fetchDashboardData(c: Competencia, unidadeIds?: string[] | null) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let unidadesQ = (supabase as any).from('unidades').select('id, nome').eq('ativo', true).order('nome')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let avaliacoesQ = (supabase as any)
+    .from('avaliacoes')
+    .select('id, unidade_id')
+    .eq('competencia_mes', c.mes)
+    .eq('competencia_ano', c.ano)
+  if (unidadeIds && unidadeIds.length > 0) {
+    unidadesQ   = unidadesQ.in('id', unidadeIds)
+    avaliacoesQ = avaliacoesQ.in('unidade_id', unidadeIds)
+  }
   const [{ data: unidades }, { data: setores }, { data: avaliacoes }] = await Promise.all([
-    supabase.from('unidades').select('id, nome').eq('ativo', true).order('nome'),
+    unidadesQ,
     supabase.from('setores').select('id, nome, rotulo, ordem').order('ordem'),
-    supabase
-      .from('avaliacoes')
-      .select('id, unidade_id')
-      .eq('competencia_mes', c.mes)
-      .eq('competencia_ano', c.ano),
+    avaliacoesQ,
   ])
 
   if (!unidades || !setores || !avaliacoes) return { notasUnidades: [], notaRede: null }
@@ -85,18 +93,18 @@ async function fetchDashboardData(c: Competencia) {
   return { notasUnidades, notaRede, visitCounts, sectorVisitCounts }
 }
 
-export function useDashboard(competencia: Competencia) {
+export function useDashboard(competencia: Competencia, unidadeIds?: string[] | null) {
   const ant = competenciaAnterior(competencia)
 
   const atual = useQuery({
-    queryKey: ['dashboard', competencia.mes, competencia.ano],
-    queryFn: () => fetchDashboardData(competencia),
+    queryKey: ['dashboard', competencia.mes, competencia.ano, unidadeIds],
+    queryFn: () => fetchDashboardData(competencia, unidadeIds),
     staleTime: 1000 * 60 * 5,
   })
 
   const anterior = useQuery({
-    queryKey: ['dashboard', ant.mes, ant.ano],
-    queryFn: () => fetchDashboardData(ant),
+    queryKey: ['dashboard', ant.mes, ant.ano, unidadeIds],
+    queryFn: () => fetchDashboardData(ant, unidadeIds),
     staleTime: 1000 * 60 * 10,
   })
 

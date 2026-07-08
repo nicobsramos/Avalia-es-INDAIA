@@ -126,11 +126,9 @@ function Relatorio({ competencia, opcoes, onChange }: { competencia: Competencia
 }
 
 function Historico({ unidadeIds }: { unidadeIds: string[] | null }) {
-  const { data: avaliacoes, isLoading, error } = useNutriAvaliacoesList()
+  const { data: avaliacoes, isLoading, error } = useNutriAvaliacoesList(unidadeIds ?? undefined)
 
-  const avaliacoesVisiveis = unidadeIds !== null
-    ? (avaliacoes ?? []).filter((av) => unidadeIds.includes((av as any).unidade_id))
-    : (avaliacoes ?? [])
+  const avaliacoesVisiveis = avaliacoes ?? []
 
   return (
     <div className="space-y-4">
@@ -170,8 +168,8 @@ function Historico({ unidadeIds }: { unidadeIds: string[] | null }) {
 
 export function SegAlimentar5S() {
   const { perfil } = useAuth()
-  const isLeitura = perfil?.role === 'leitura'
-  const unidadeIdsPermitidas: string[] | null = isLeitura ? (perfil?.unidades_ids ?? []) : null
+  const isRestrito = perfil?.role !== 'rede'
+  const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
 
   const { data: opcoes = [] } = useCompetenciasDisponiveis()
   const [tab, setTab] = useState<Tab>('relatorio')
