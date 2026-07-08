@@ -16,6 +16,8 @@ interface UsuarioAtivo {
   role: string
   status: string
   unidades_ids: string[]
+  setores_avaliacao: string[]
+  pode_nutri: boolean
 }
 
 interface Unidade {
@@ -29,11 +31,17 @@ async function getToken(): Promise<string> {
 }
 
 const ROLE_LABEL: Record<string, string> = { rede: 'Rede', lider: 'Líder', leitura: 'Leitura' }
+const ROLE_COR: Record<string, string> = {
+  rede:    'bg-purple-100 text-purple-700',
+  lider:   'bg-blue-100 text-blue-700',
+  leitura: 'bg-gray-100 text-gray-500',
+}
 
 export function AdminSolicitacoes() {
   const [lista, setLista] = useState<Solicitacao[]>([])
   const [usuarios, setUsuarios] = useState<UsuarioAtivo[]>([])
   const [unidades, setUnidades] = useState<Unidade[]>([])
+  const [setores, setSetores] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingUsuarios, setLoadingUsuarios] = useState(true)
   const [erro, setErro] = useState('')
@@ -42,7 +50,10 @@ export function AdminSolicitacoes() {
   // Modal de edição
   const [editandoUser, setEditandoUser] = useState<UsuarioAtivo | null>(null)
   const [editNome, setEditNome] = useState('')
+  const [editRole, setEditRole] = useState<'rede' | 'lider' | 'leitura'>('lider')
   const [editUnidades, setEditUnidades] = useState<string[]>([])
+  const [editSetores, setEditSetores] = useState<string[]>([])
+  const [editPodeNutri, setEditPodeNutri] = useState(false)
   const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
@@ -73,6 +84,7 @@ export function AdminSolicitacoes() {
         const json = await res.json()
         setUsuarios(json.usuarios ?? [])
         setUnidades(json.unidades ?? [])
+        setSetores(json.setores ?? [])
       }
     } finally {
       setLoadingUsuarios(false)
@@ -101,12 +113,21 @@ export function AdminSolicitacoes() {
   function abrirEdicao(u: UsuarioAtivo) {
     setEditandoUser(u)
     setEditNome(u.nome)
+    setEditRole(u.role as 'rede' | 'lider' | 'leitura')
     setEditUnidades(u.unidades_ids ?? [])
+    setEditSetores(u.setores_avaliacao ?? [])
+    setEditPodeNutri(u.pode_nutri ?? false)
   }
 
   function toggleUnidade(id: string) {
     setEditUnidades((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  function toggleSetor(nome: string) {
+    setEditSetores((prev) =>
+      prev.includes(nome) ? prev.filter((x) => x !== nome) : [...prev, nome]
     )
   }
 
@@ -121,13 +142,16 @@ export function AdminSolicitacoes() {
         body: JSON.stringify({
           userId: editandoUser.id,
           nome: editNome.trim() || editandoUser.nome,
+          role: editRole,
           unidades_ids: editUnidades,
+          setores_avaliacao: editSetores,
+          pode_nutri: editPodeNutri,
         }),
       })
       if (!res.ok) { alert('Erro ao salvar.'); return }
       setUsuarios((prev) => prev.map((u) =>
         u.id === editandoUser.id
-          ? { ...u, nome: editNome.trim() || u.nome, unidades_ids: editUnidades }
+          ? { ...u, nome: editNome.trim() || u.nome, role: editRole, unidades_ids: editUnidades, setores_avaliacao: editSetores, pode_nutri: editPodeNutri }
           : u
       ))
       setEditandoUser(null)
@@ -203,7 +227,6 @@ export function AdminSolicitacoes() {
         </div>
 
         {loadingUsuarios && <LoadingSpinner text="Carregando usuários..." />}
-
         {!loadingUsuarios && usuarios.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">Nenhum usuário encontrado.</p>
         )}
@@ -211,25 +234,28 @@ export function AdminSolicitacoes() {
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
           {usuarios.map((u) => (
             <div key={u.id} className="px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{u.nome}</p>
-                  <p className="text-xs text-gray-400 truncate">{u.email}</p>
-                  {u.unidades_ids.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {u.unidades_ids.length} unidade{u.unidades_ids.length !== 1 ? 's' : ''}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-900">{u.nome}</p>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_COR[u.role] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {ROLE_LABEL[u.role] ?? u.role}
+                    </span>
+                    {u.pode_nutri && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Nutri</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{u.email}</p>
+                  {u.setores_avaliacao.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Setores: {u.setores_avaliacao.join(', ')}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                    {ROLE_LABEL[u.role] ?? u.role}
-                  </span>
-                  <button onClick={() => abrirEdicao(u)}
-                    className="text-xs text-brand-600 hover:text-brand-700 font-medium px-2 py-1 rounded hover:bg-brand-50 transition-colors">
-                    Editar
-                  </button>
-                </div>
+                <button onClick={() => abrirEdicao(u)}
+                  className="shrink-0 text-xs text-brand-600 hover:text-brand-700 font-medium px-2 py-1 rounded hover:bg-brand-50 transition-colors">
+                  Editar
+                </button>
               </div>
             </div>
           ))}
@@ -240,7 +266,7 @@ export function AdminSolicitacoes() {
       {editandoUser && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-gray-900">Editar usuário</h3>
+            <h3 className="text-base font-bold text-gray-900">Editar · {editandoUser.nome}</h3>
 
             {/* Nome */}
             <div>
@@ -253,37 +279,99 @@ export function AdminSolicitacoes() {
               />
             </div>
 
-            {/* Unidades */}
+            {/* Role */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Perfil de acesso</label>
+              <div className="flex gap-2">
+                {(['lider', 'rede', 'leitura'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setEditRole(r)}
+                    className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                      editRole === r
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {ROLE_LABEL[r]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Setores de avaliação operacional */}
             <div>
               <label className="text-xs font-medium text-gray-500 mb-2 block">
-                Unidades com acesso
+                Setores operacionais
+                <span className="text-gray-400 font-normal ml-1">(deixe vazio para ver todos)</span>
               </label>
-              <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                {unidades.map((u) => {
-                  const marcada = editUnidades.includes(u.id)
+              <div className="space-y-1.5">
+                {setores.map((s) => {
+                  const marcado = editSetores.includes(s)
                   return (
-                    <label key={u.id}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
-                        marcada
-                          ? 'bg-brand-50 border-brand-300'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                    <label key={s}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                        marcado ? 'bg-brand-50 border-brand-300' : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={marcada}
-                        onChange={() => toggleUnidade(u.id)}
+                        checked={marcado}
+                        onChange={() => toggleSetor(s)}
                         className="accent-brand-600 w-4 h-4 shrink-0"
                       />
-                      <span className="text-sm text-gray-800">{u.nome}</span>
+                      <span className="text-sm text-gray-800">{s}</span>
                     </label>
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">
-                {editUnidades.length} de {unidades.length} selecionadas
-              </p>
             </div>
+
+            {/* Seg. Alimentar */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Seg. Alimentar & 5S</label>
+              <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                editPodeNutri ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={editPodeNutri}
+                  onChange={(e) => setEditPodeNutri(e.target.checked)}
+                  className="accent-emerald-600 w-4 h-4 shrink-0"
+                />
+                <span className="text-sm text-gray-800">Pode lançar avaliações de Seg. Alimentar</span>
+              </label>
+            </div>
+
+            {/* Unidades (visibilidade — para role leitura) */}
+            {editRole === 'leitura' && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                  Unidades com acesso
+                </label>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {unidades.map((u) => {
+                    const marcada = editUnidades.includes(u.id)
+                    return (
+                      <label key={u.id}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                          marcada ? 'bg-brand-50 border-brand-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={marcada}
+                          onChange={() => toggleUnidade(u.id)}
+                          className="accent-brand-600 w-4 h-4 shrink-0"
+                        />
+                        <span className="text-sm text-gray-800">{u.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{editUnidades.length} de {unidades.length} selecionadas</p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-1">
               <button onClick={() => setEditandoUser(null)}
