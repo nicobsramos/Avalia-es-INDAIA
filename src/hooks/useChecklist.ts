@@ -49,6 +49,7 @@ export function useUnidades(unidadeIds?: string[] | null) {
   return useQuery({
     queryKey: ['unidades', unidadeIds],
     queryFn: async (): Promise<Unidade[]> => {
+      if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any).from('unidades').select('*').eq('ativo', true).order('nome')
       if (unidadeIds && unidadeIds.length > 0) q = q.in('id', unidadeIds)

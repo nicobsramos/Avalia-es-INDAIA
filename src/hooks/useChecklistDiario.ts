@@ -174,6 +174,7 @@ export function useChecklistCompliance(unidadeIds?: string[] | null) {
   return useQuery({
     queryKey: ['checklist-compliance', mondayStr, todayStr, unidadeIds],
     queryFn: async (): Promise<ChecklistCompliance[]> => {
+      if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let unidadesQ = (supabase as any)
         .from('unidades')

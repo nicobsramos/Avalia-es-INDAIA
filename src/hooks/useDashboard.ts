@@ -13,6 +13,10 @@ interface RespostaRow { setor_id: string; valor: number; avaliacao_id: string }
 interface AvaliacaoRow { id: string; unidade_id: string }
 
 async function fetchDashboardData(c: Competencia, unidadeIds?: string[] | null) {
+  // Array vazio = usuário restrito sem unidades → não mostrar nada
+  if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) {
+    return { notasUnidades: [], notaRede: null, visitCounts: {}, sectorVisitCounts: {} }
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let unidadesQ = (supabase as any).from('unidades').select('id, nome').eq('ativo', true).order('nome')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

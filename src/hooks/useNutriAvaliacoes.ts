@@ -97,6 +97,7 @@ export function useNutriReport(competencia: Competencia, unidadeIds?: string[] |
     queryKey: ['nutri-report', competencia.mes, competencia.ano, unidadeIds],
     queryFn: async (): Promise<NotaUnidadeNutri[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) return []
       let q = (supabase as any)
         .from('nutri_avaliacoes')
         .select('id, unidade_id, unidades(nome)')
@@ -173,6 +174,7 @@ export function useNutriAvaliacoesList(unidadeIds?: string[] | null) {
   return useQuery({
     queryKey: ['nutri-avaliacoes', unidadeIds],
     queryFn: async (): Promise<NutriAvaliacaoRow[]> => {
+      if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any)
         .from('nutri_avaliacoes')
