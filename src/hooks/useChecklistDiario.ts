@@ -165,22 +165,25 @@ export function useChecklistExistente(
   })
 }
 
-export function useChecklistCompliance() {
+export function useChecklistCompliance(unidadeIds?: string[] | null) {
   const monday = getMondayOfWeek(new Date())
   const today = new Date()
   const mondayStr = toDateStr(monday)
   const todayStr = toDateStr(today)
 
   return useQuery({
-    queryKey: ['checklist-compliance', mondayStr, todayStr],
+    queryKey: ['checklist-compliance', mondayStr, todayStr, unidadeIds],
     queryFn: async (): Promise<ChecklistCompliance[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let unidadesQ = (supabase as any)
+        .from('unidades')
+        .select('id, nome, dias_operacao_semana')
+        .eq('ativo', true)
+        .order('nome')
+      if (unidadeIds && unidadeIds.length > 0) unidadesQ = unidadesQ.in('id', unidadeIds)
+
       const [{ data: unidades, error: e1 }, { data: checklists, error: e2 }] = await Promise.all([
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any)
-          .from('unidades')
-          .select('id, nome, dias_operacao_semana')
-          .eq('ativo', true)
-          .order('nome'),
+        unidadesQ,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from('checklist_cozinha')

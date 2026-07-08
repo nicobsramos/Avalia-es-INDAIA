@@ -5,10 +5,12 @@ import { useDashboard } from '../hooks/useDashboard'
 import { useSegAlimentar } from '../hooks/useSegAlimentar'
 import { useNutriReport } from '../hooks/useNutriAvaliacoes'
 import { useChecklistCompliance, diasDecorridosSemana } from '../hooks/useChecklistDiario'
+import { useAuth } from '../context/AuthContext'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
 import { bgCorClasse, corClasse, formatarNota, variacaoSeta, variacaoCorClasse } from '../utils/notas'
+import { DB_TO_SHEET } from '../utils/unidades'
 import type { NotaUnidade, Competencia } from '../types'
 import { notaRede2524 } from '../utils/sheetsParser'
 import type { NotaOperacao } from '../utils/sheetsParser'
@@ -162,12 +164,27 @@ function CardChecklistCompliance({ unidade_id, unidade_nome, abertura, fechament
 
 export function Dashboard() {
   const { competencia } = useCompetencia()
-  const { notasUnidades, notaRede, variacao, loading: loadOp, error: errOp } = useDashboard(competencia)
-  const { rows: sheetsRows, loading: loadNutriSheets, error: errNutri } = useSegAlimentar(competencia)
-  const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia)
-  const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance()
+  const { perfil } = useAuth()
 
-  // Merge DB (primary) + Sheets (fallback for units not in DB)
+  const isRestrito = perfil?.role !== 'rede'
+  const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
+
+  const { notasUnidades, notaRede, variacao, loading: loadOp, error: errOp } = useDashboard(competencia, unidadeIdsPermitidas)
+  const { rows: sheetsRows, loading: loadNutriSheets, error: errNutri } = useSegAlimentar(competencia)
+  const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia, unidadeIdsPermitidas)
+  const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance(unidadeIdsPermitidas)
+
+  // Deriva nomes de unidades permitidas para filtrar dados de planilha
+  const permittedSheetKeys = useMemo<string[] | null>(() => {
+    if (!unidadeIdsPermitidas) return null
+    return notasUnidades.flatMap((nu) => { const k = DB_TO_SHEET[nu.unidade_nome]; return k ? [k] : [] })
+  }, [unidadeIdsPermitidas, notasUnidades])
+
+  function matchSheet(name: string, keys: string[]) {
+    return keys.some((k) => name === k || name.startsWith(k + ' ') || name.startsWith(k + '–') || name.startsWith(k + ' –'))
+  }
+
+  // Merge DB (primary) + Sheets (fallback for units not in DB), filtered for restricted users
   const rows = useMemo<NotaOperacao[]>(() => {
     const dbRows: NotaOperacao[] = (dbNutri ?? []).map((u) => ({
       unidade: u.unidade_nome,
@@ -178,9 +195,12 @@ export function Dashboard() {
       visitas: u.visitas,
     }))
     const dbNames = new Set(dbRows.map((r) => r.unidade.toLowerCase()))
-    const extraSheets = sheetsRows.filter((r) => !dbNames.has(r.unidade.toLowerCase()))
+    const filteredSheets = permittedSheetKeys
+      ? sheetsRows.filter((r) => matchSheet(r.unidade, permittedSheetKeys))
+      : sheetsRows
+    const extraSheets = filteredSheets.filter((r) => !dbNames.has(r.unidade.toLowerCase()))
     return [...dbRows, ...extraSheets].sort((a, b) => a.unidade.localeCompare(b.unidade))
-  }, [dbNutri, sheetsRows])
+  }, [dbNutri, sheetsRows, permittedSheetKeys])
 
   const notaRedeNutri = useMemo(() => notaRede2524(rows), [rows])
   const loadNutri = loadNutriSheets || loadNutriDB

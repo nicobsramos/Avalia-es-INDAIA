@@ -92,15 +92,18 @@ export function useNutriItens() {
   })
 }
 
-export function useNutriReport(competencia: Competencia) {
+export function useNutriReport(competencia: Competencia, unidadeIds?: string[] | null) {
   return useQuery({
-    queryKey: ['nutri-report', competencia.mes, competencia.ano],
+    queryKey: ['nutri-report', competencia.mes, competencia.ano, unidadeIds],
     queryFn: async (): Promise<NotaUnidadeNutri[]> => {
-      const { data: avaliacoes, error: avErr } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from('nutri_avaliacoes')
         .select('id, unidade_id, unidades(nome)')
         .eq('competencia_mes', competencia.mes)
         .eq('competencia_ano', competencia.ano)
+      if (unidadeIds && unidadeIds.length > 0) q = q.in('unidade_id', unidadeIds)
+      const { data: avaliacoes, error: avErr } = await q
       if (avErr) throw avErr
       if (!avaliacoes || avaliacoes.length === 0) return []
 
