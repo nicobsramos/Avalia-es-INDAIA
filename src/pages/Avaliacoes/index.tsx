@@ -7,7 +7,7 @@ import { useSegAlimentar } from '../../hooks/useSegAlimentar'
 import { useAuth } from '../../context/AuthContext'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { corClasse, formatarNota, formatarCompetencia, competenciaAtual } from '../../utils/notas'
-import { DB_TO_SHEET, metaOperacional, metaNutri } from '../../utils/unidades'
+import { DB_TO_SHEET, metaOperacional, metaNutri, metaSetorOp } from '../../utils/unidades'
 import { useCompetenciasDisponiveis } from '../../hooks/useCompetenciasDisponiveis'
 import type { Competencia } from '../../types'
 
@@ -465,7 +465,7 @@ export function Avaliacoes() {
     if (m) sheetVisitas[m[0].toUpperCase()] = row.visitas
   }
 
-  const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento - Maitres', 'Atendimento - Pré evento']
+  const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
@@ -496,7 +496,7 @@ export function Avaliacoes() {
           {(perfil?.role === 'rede' || setoresPermitidos.length > 0) && (
           <SecaoColapsavel titulo="Operacional" meta="visitas/mês por setor">
             {notasVisiveis.map((nu) => {
-              const meta = metaOperacional(nu.unidade_nome)
+              const metaUnidade = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
               const setores = nu.notas_setores.filter((ns) => SETORES_OP.includes(ns.setor_nome))
               return (
@@ -507,6 +507,7 @@ export function Avaliacoes() {
                   <div className="grid grid-cols-2 gap-2">
                     {setores.map((ns) => {
                       const sectorCount = counts[ns.setor_nome] ?? 0
+                      const meta = metaSetorOp(ns.setor_nome) ?? metaUnidade
                       return (
                         <div key={ns.setor_id} className="text-center bg-gray-50 rounded-lg py-1.5 px-1">
                           <p className="text-xs text-gray-400 mb-0.5">{ns.setor_rotulo}</p>
