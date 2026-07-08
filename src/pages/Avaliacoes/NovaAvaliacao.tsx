@@ -139,8 +139,9 @@ export function NovaAvaliacao() {
       return
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['avaliacoes'] })
+    await queryClient.invalidateQueries({ queryKey: ['historico-av'] })
     await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    await queryClient.invalidateQueries({ queryKey: ['competencias-disponiveis'] })
 
     fetch('/api/notify', {
       method: 'POST',

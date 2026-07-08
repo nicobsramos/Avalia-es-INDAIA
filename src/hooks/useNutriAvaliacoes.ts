@@ -271,5 +271,7 @@ export function useInvalidateNutri() {
   return () => {
     qc.invalidateQueries({ queryKey: ['nutri-avaliacoes'] })
     qc.invalidateQueries({ queryKey: ['nutri-report'] })
+    qc.invalidateQueries({ queryKey: ['historico-nutri'] })
+    qc.invalidateQueries({ queryKey: ['competencias-disponiveis'] })
   }
 }
