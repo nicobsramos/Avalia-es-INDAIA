@@ -139,7 +139,7 @@ export function DetalheAvaliacao() {
       </div>
 
       {/* Resumo por setor */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${notasPorSetor.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}>
         {notasPorSetor.map(({ setor, nota }) => (
           <div key={setor.id} className={`rounded-xl border p-3 text-center ${bgCorClasse(nota)}`}>
             <p className="text-xs text-gray-500 mb-1">{setor.rotulo}</p>

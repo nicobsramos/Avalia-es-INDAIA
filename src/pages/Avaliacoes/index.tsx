@@ -431,7 +431,7 @@ export function Avaliacoes() {
     if (m) sheetVisitas[m[0].toUpperCase()] = row.visitas
   }
 
-  const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento']
+  const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento - Maitres', 'Atendimento - Pré evento']
 
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
@@ -470,7 +470,7 @@ export function Avaliacoes() {
                   <div className="mb-2">
                     <span className="text-sm font-semibold text-gray-900">{nu.unidade_nome}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {setores.map((ns) => {
                       const sectorCount = counts[ns.setor_nome] ?? 0
                       return (
