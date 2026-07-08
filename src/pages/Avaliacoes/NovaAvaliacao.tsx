@@ -225,6 +225,15 @@ export function NovaAvaliacao() {
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
+        {setoresComItens.length === 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center space-y-2">
+            <p className="text-sm font-semibold text-amber-800">Nenhum setor disponível para avaliação</p>
+            <p className="text-xs text-amber-700">
+              Seu usuário não tem setores configurados ou os setores atribuídos foram renomeados.
+              Peça ao administrador para atualizar suas permissões em <strong>Admin → Usuários</strong>.
+            </p>
+          </div>
+        )}
         {(setoresComItens ?? []).map((sc) => (
           <div key={sc.setor.id} className="space-y-5">
             <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
