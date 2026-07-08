@@ -11,6 +11,8 @@ import { DB_TO_SHEET, metaOperacional, metaNutri } from '../../utils/unidades'
 import { useCompetenciasDisponiveis } from '../../hooks/useCompetenciasDisponiveis'
 import type { Competencia } from '../../types'
 
+const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
 
 function useNutriCounts(competencia: Competencia) {
   return useQuery({
@@ -82,7 +84,28 @@ function Chevron({ aberto }: { aberto: boolean }) {
 
 // ── Histórico operacional — lista com link para detalhe completo ───────────────
 function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
+  const { user, perfil } = useAuth()
+  const queryClient = useQueryClient()
   const { data: avaliacoes, isLoading } = useHistoricoOp(competencia, unidadeIds)
+  const [deletingAv, setDeletingAv] = useState<string | null>(null)
+  const canDelete = user?.email === ADMIN_EMAIL || perfil?.role === 'rede'
+
+  async function handleDelete(avaliacaoId: string) {
+    if (!confirm('Apagar este lançamento? Esta ação não pode ser desfeita.')) return
+    setDeletingAv(avaliacaoId)
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      const res = await fetch(`/api/admin-avaliacao?id=${avaliacaoId}&tipo=operacional`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) { alert('Erro ao apagar lançamento.'); return }
+      queryClient.invalidateQueries({ queryKey: ['historico-av'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    } finally {
+      setDeletingAv(null)
+    }
+  }
 
   if (isLoading) return <div className="p-4"><LoadingSpinner text="Carregando..." /></div>
   if (!avaliacoes || avaliacoes.length === 0)
@@ -93,19 +116,33 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
       {avaliacoes.map((av) => {
         const dataFmt = av.data_visita.split('-').reverse().join('/')
         return (
-          <Link
-            key={av.id}
-            to={`/avaliacoes/${av.id}`}
-            className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3 min-w-0">
+          <div key={av.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
+            <Link to={`/avaliacoes/${av.id}`} className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-xs text-gray-400 shrink-0 font-medium">{dataFmt}</span>
               <span className="text-sm font-semibold text-gray-800 truncate">{av.unidades?.nome ?? '—'}</span>
+            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              {canDelete && (
+                <button
+                  disabled={deletingAv === av.id}
+                  onClick={() => handleDelete(av.id)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 hover:border-red-200 px-2 py-1 rounded-lg transition-colors font-medium disabled:opacity-50"
+                  title="Apagar lançamento"
+                >
+                  {deletingAv === av.id ? '…' : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )}
+                </button>
+              )}
+              <Link to={`/avaliacoes/${av.id}`} className="shrink-0">
+                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
-            <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          </div>
         )
       })}
     </div>
@@ -114,9 +151,6 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
 
 
 // ── Histórico Nutri DB ────────────────────────────────────────────────────────
-const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
-const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
-
 function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
   const { user } = useAuth()
   const isJulia = user?.email === JULIA_EMAIL || user?.email === ADMIN_EMAIL

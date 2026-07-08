@@ -4,12 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_EMAIL  = 'n.ramos.indaia@gmail.com'
 const JULIA_EMAIL  = 'nutrijuliamafra@gmail.com'
 
-async function getCallerEmail(req: any, admin: any): Promise<string | null> {
+async function getCaller(req: any, admin: any): Promise<{ email: string; id: string } | null> {
   const auth = req.headers['authorization']
   if (!auth?.startsWith('Bearer ')) return null
   const token = auth.slice(7)
   const { data: { user } } = await admin.auth.getUser(token)
-  return user?.email ?? null
+  if (!user) return null
+  return { email: user.email ?? '', id: user.id }
 }
 
 const ALLOWED_OP   = ['data_visita', 'competencia_mes', 'competencia_ano']
@@ -25,11 +26,21 @@ export default async function handler(req: any, res: any) {
 
   const admin = createClient(supabaseUrl, serviceKey)
 
-  const callerEmail = await getCallerEmail(req, admin)
+  const caller = await getCaller(req, admin)
+  const callerEmail = caller?.email ?? null
   const { tipo } = req.query as Record<string, string>
-  const isAdmin = callerEmail === ADMIN_EMAIL
+
+  // Busca role do usuário no banco para permissões baseadas em perfil
+  let callerRole: string | null = null
+  if (caller?.id) {
+    const { data } = await (admin as any).from('usuarios').select('role').eq('id', caller.id).single()
+    callerRole = data?.role ?? null
+  }
+
+  const isAdmin      = callerEmail === ADMIN_EMAIL
   const isJuliaNutri = callerEmail === JULIA_EMAIL && tipo === 'nutri'
-  if (!isAdmin && !isJuliaNutri) return res.status(403).json({ error: 'Acesso negado' })
+  const isRedeOp     = callerRole === 'rede' && tipo === 'operacional'
+  if (!isAdmin && !isJuliaNutri && !isRedeOp) return res.status(403).json({ error: 'Acesso negado' })
 
   const { id } = req.query as Record<string, string>
   if (!id || (tipo !== 'operacional' && tipo !== 'nutri'))

@@ -36,10 +36,11 @@ async function getToken() {
 export function DetalheAvaliacao() {
   const { id } = useParams<{ id: string }>()
   const { data, isLoading, error } = useDetalheAvaliacao(id ?? '')
-  const { user } = useAuth()
+  const { user, perfil } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const isAdmin = user?.email === ADMIN_EMAIL
+  const canEdit = isAdmin || perfil?.role === 'rede'
 
   const [deletando, setDeletando] = useState(false)
   const [editando, setEditando] = useState(false)
@@ -194,8 +195,8 @@ export function DetalheAvaliacao() {
         )
       })}
 
-      {/* Ações admin */}
-      {isAdmin && (
+      {/* Ações admin / rede */}
+      {canEdit && (
         <div className="border border-red-200 rounded-xl p-4 bg-red-50 space-y-3">
           <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Ações administrativas</p>
           <div className="flex gap-3">
