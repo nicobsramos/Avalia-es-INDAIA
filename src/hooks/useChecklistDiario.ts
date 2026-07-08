@@ -8,6 +8,7 @@ export interface ChecklistCozinhaItem {
   descricao: string
   ordem: number
   ativo: boolean
+  setor: string | null
 }
 
 export interface ChecklistCozinha {
@@ -55,9 +56,21 @@ export function diasDecorridosSemana(): number {
   return dia === 0 ? 6 : dia
 }
 
-export function useChecklistItens(tipo: 'abertura' | 'fechamento') {
+// Maps setores_avaliacao values (which can be granular like "Atendimento - Maitres")
+// to the simpler checklist sector names ('Cozinha', 'Bar', 'Atendimento')
+export function toChecklistSetores(setoresAvaliacao: string[]): string[] {
+  const result = new Set<string>()
+  for (const s of setoresAvaliacao) {
+    if (s === 'Cozinha') result.add('Cozinha')
+    else if (s === 'Bar') result.add('Bar')
+    else if (s.startsWith('Atendimento')) result.add('Atendimento')
+  }
+  return Array.from(result)
+}
+
+export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter?: string[]) {
   return useQuery({
-    queryKey: ['checklist-cozinha-itens', tipo],
+    queryKey: ['checklist-cozinha-itens', tipo, setoresFilter],
     queryFn: async (): Promise<ChecklistCozinhaItem[]> => {
       const { data, error } = await supabase
         .from('checklist_cozinha_itens')
@@ -66,7 +79,12 @@ export function useChecklistItens(tipo: 'abertura' | 'fechamento') {
         .eq('ativo', true)
         .order('ordem')
       if (error) throw error
-      return (data ?? []) as ChecklistCozinhaItem[]
+      const all = (data ?? []) as ChecklistCozinhaItem[]
+      // Filter by sector when specified; items with setor=null are visible to all
+      if (setoresFilter && setoresFilter.length > 0) {
+        return all.filter((item) => !item.setor || setoresFilter.includes(item.setor))
+      }
+      return all
     },
     staleTime: 1000 * 60 * 60,
   })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -30,6 +30,10 @@ async function getToken(): Promise<string> {
   return data.session?.access_token ?? ''
 }
 
+function extractCidade(unitNome: string): string {
+  return unitNome.split(' – ')[0]
+}
+
 const ROLE_LABEL: Record<string, string> = { rede: 'Rede', lider: 'Líder', leitura: 'Leitura' }
 const ROLE_COR: Record<string, string> = {
   rede:    'bg-purple-100 text-purple-700',
@@ -46,6 +50,10 @@ export function AdminSolicitacoes() {
   const [loadingUsuarios, setLoadingUsuarios] = useState(true)
   const [erro, setErro] = useState('')
   const [processando, setProcessando] = useState<string | null>(null)
+
+  // Filtros
+  const [filtroCidade, setFiltroCidade] = useState('')
+  const [filtroSetor, setFiltroSetor]   = useState('')
 
   // Modal de edição
   const [editandoUser, setEditandoUser] = useState<UsuarioAtivo | null>(null)
@@ -160,6 +168,26 @@ export function AdminSolicitacoes() {
     }
   }
 
+  const cidades = useMemo(
+    () => [...new Set(unidades.map((u) => extractCidade(u.nome)))].sort(),
+    [unidades],
+  )
+
+  const usuariosFiltrados = useMemo(() =>
+    usuarios.filter((u) => {
+      if (filtroSetor && !u.setores_avaliacao.includes(filtroSetor)) return false
+      if (filtroCidade) {
+        if (u.unidades_ids.length === 0) return true
+        const cidadesDoUsuario = u.unidades_ids
+          .map((id) => unidades.find((un) => un.id === id)?.nome ?? '')
+          .map((nome) => extractCidade(nome))
+        if (!cidadesDoUsuario.includes(filtroCidade)) return false
+      }
+      return true
+    }),
+    [usuarios, unidades, filtroCidade, filtroSetor],
+  )
+
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-8">
 
@@ -226,13 +254,44 @@ export function AdminSolicitacoes() {
           </button>
         </div>
 
+        {/* Filtros */}
+        {!loadingUsuarios && unidades.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            <select
+              value={filtroCidade}
+              onChange={(e) => setFiltroCidade(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="">Todas as cidades</option>
+              {cidades.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
+              value={filtroSetor}
+              onChange={(e) => setFiltroSetor(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="">Todos os setores</option>
+              {setores.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {(filtroCidade || filtroSetor) && (
+              <span className="text-xs text-gray-500 self-center">
+                {usuariosFiltrados.length} de {usuarios.length} usuários
+              </span>
+            )}
+          </div>
+        )}
+
         {loadingUsuarios && <LoadingSpinner text="Carregando usuários..." />}
-        {!loadingUsuarios && usuarios.length === 0 && (
+        {!loadingUsuarios && usuariosFiltrados.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">Nenhum usuário encontrado.</p>
         )}
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
-          {usuarios.map((u) => (
+          {usuariosFiltrados.map((u) => (
             <div key={u.id} className="px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

@@ -6,6 +6,7 @@ import {
   useChecklistItens,
   useChecklistExistente,
   useSalvarChecklist,
+  toChecklistSetores,
 } from '../../hooks/useChecklistDiario'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -39,8 +40,9 @@ export function NovoChecklist() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const { data: unidades, isLoading: loadUnidades } = useUnidades()
-  const { data: itens, isLoading: loadItens } = useChecklistItens(tipo)
+  const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, checklistSetores.length > 0 ? checklistSetores : undefined)
   const { data: existente, isLoading: loadExistente } = useChecklistExistente(
     unidadeId || undefined,
     tipo,
@@ -277,6 +279,14 @@ export function NovoChecklist() {
       <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
         {loadItens ? (
           <LoadingSpinner text="Carregando itens..." />
+        ) : secoes.length === 0 ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center space-y-2">
+            <p className="text-sm font-semibold text-amber-800">Nenhum item disponível para seu setor</p>
+            <p className="text-xs text-amber-700">
+              Seu usuário não tem setores configurados ou ainda não há itens cadastrados para seu setor.
+              Peça ao administrador para atualizar suas permissões em <strong>Admin → Usuários</strong>.
+            </p>
+          </div>
         ) : (
           secoes.map((secao) => (
             <div key={secao.titulo} className="space-y-2">
