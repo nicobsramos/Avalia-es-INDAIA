@@ -4,7 +4,7 @@ import { useCompetencia } from '../context/CompetenciaContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useSegAlimentar } from '../hooks/useSegAlimentar'
 import { useNutriReport } from '../hooks/useNutriAvaliacoes'
-import { useChecklistCompliance } from '../hooks/useChecklistDiario'
+import { useChecklistCompliance, toChecklistSetores } from '../hooks/useChecklistDiario'
 import { useAuth } from '../context/AuthContext'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
@@ -166,6 +166,9 @@ export function Dashboard() {
 
   const isRestrito = perfil?.role !== 'rede'
   const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
+  const checklistSetores = isRestrito
+    ? toChecklistSetores(perfil?.setores_avaliacao ?? [])
+    : null
 
   const compAnt = useMemo(() => competenciaAnterior(competencia), [competencia])
 
@@ -174,7 +177,7 @@ export function Dashboard() {
   const { rows: sheetsRowsAnt } = useSegAlimentar(compAnt)
   const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia, unidadeIdsPermitidas)
   const { data: dbNutriAnt } = useNutriReport(compAnt, unidadeIdsPermitidas)
-  const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance(unidadeIdsPermitidas)
+  const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance(unidadeIdsPermitidas, checklistSetores)
 
   // Deriva nomes de unidades permitidas para filtrar dados de planilha
   const permittedSheetKeys = useMemo<string[] | null>(() => {
@@ -275,24 +278,29 @@ export function Dashboard() {
         )}
       </section>
 
-      {/* CHECKLIST DIÁRIO */}
-      <section>
-        <SecaoHeader label="Checklist Diário — Cozinha" nota={null} />
-        <p className="text-xs text-gray-400 -mt-2 mb-3">Preenchimentos desta semana (seg → hoje)</p>
-        {loadCompliance ? (
-          <LoadingSpinner text="Carregando..." />
-        ) : (compliance ?? []).length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
-            Nenhuma unidade com checklist configurado.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {(compliance ?? []).map((u) => (
-              <CardChecklistCompliance key={u.unidade_id} {...u} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* CHECKLIST DIÁRIO — hidden for restricted users with no checklist sectors */}
+      {(!isRestrito || (checklistSetores && checklistSetores.length > 0)) && (
+        <section>
+          <SecaoHeader
+            label={`Checklist Diário${checklistSetores && checklistSetores.length > 0 ? ` — ${checklistSetores.join(', ')}` : ''}`}
+            nota={null}
+          />
+          <p className="text-xs text-gray-400 -mt-2 mb-3">Preenchimentos desta semana (seg a dom)</p>
+          {loadCompliance ? (
+            <LoadingSpinner text="Carregando..." />
+          ) : (compliance ?? []).length === 0 ? (
+            <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              Nenhuma unidade com checklist configurado.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {(compliance ?? []).map((u) => (
+                <CardChecklistCompliance key={u.unidade_id} {...u} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Modal de sugestões */}
       {modal && (

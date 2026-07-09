@@ -109,6 +109,7 @@ export function NovoChecklist() {
         data_operacao: dataOperacao,
         responsavel,
         obs_gerais: obsGerais,
+        setor: checklistSetores[0] ?? null,
         respostas,
       })
 

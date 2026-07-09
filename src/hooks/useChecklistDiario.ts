@@ -165,14 +165,14 @@ export function useChecklistExistente(
   })
 }
 
-export function useChecklistCompliance(unidadeIds?: string[] | null) {
+export function useChecklistCompliance(unidadeIds?: string[] | null, setores?: string[] | null) {
   const monday = getMondayOfWeek(new Date())
   const today = new Date()
   const mondayStr = toDateStr(monday)
   const todayStr = toDateStr(today)
 
   return useQuery({
-    queryKey: ['checklist-compliance', mondayStr, todayStr, unidadeIds],
+    queryKey: ['checklist-compliance', mondayStr, todayStr, unidadeIds, setores],
     queryFn: async (): Promise<ChecklistCompliance[]> => {
       if (unidadeIds !== null && unidadeIds !== undefined && unidadeIds.length === 0) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,14 +183,17 @@ export function useChecklistCompliance(unidadeIds?: string[] | null) {
         .order('nome')
       if (unidadeIds && unidadeIds.length > 0) unidadesQ = unidadesQ.in('id', unidadeIds)
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let checklistsQ = (supabase as any)
+        .from('checklist_cozinha')
+        .select('unidade_id, tipo')
+        .gte('data_operacao', mondayStr)
+        .lte('data_operacao', todayStr)
+      if (setores && setores.length > 0) checklistsQ = checklistsQ.in('setor', setores)
+
       const [{ data: unidades, error: e1 }, { data: checklists, error: e2 }] = await Promise.all([
         unidadesQ,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any)
-          .from('checklist_cozinha')
-          .select('unidade_id, tipo')
-          .gte('data_operacao', mondayStr)
-          .lte('data_operacao', todayStr),
+        checklistsQ,
       ])
       if (e1) throw e1
       if (e2) throw e2
@@ -222,6 +225,7 @@ interface SalvarInput {
   data_operacao: string
   responsavel: string
   obs_gerais: string
+  setor?: string | null
   respostas: { item_id: string; feito: boolean; observacao: string }[]
 }
 
@@ -229,7 +233,7 @@ export function useSalvarChecklist() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, usuario_id, unidade_id, tipo, data_operacao, responsavel, obs_gerais, respostas }: SalvarInput) => {
+    mutationFn: async ({ id, usuario_id, unidade_id, tipo, data_operacao, responsavel, obs_gerais, setor, respostas }: SalvarInput) => {
       let checklistId: string
 
       if (id) {
@@ -244,7 +248,7 @@ export function useSalvarChecklist() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (supabase as any)
           .from('checklist_cozinha')
-          .insert({ usuario_id, unidade_id, tipo, data_operacao, responsavel, obs_gerais: obs_gerais || null })
+          .insert({ usuario_id, unidade_id, tipo, data_operacao, responsavel, obs_gerais: obs_gerais || null, setor: setor ?? null })
           .select('id')
           .single()
         if (error) throw error
