@@ -428,11 +428,12 @@ export function Avaliacoes() {
     }
   }, [opcoes])
   const valor = `${competencia.ano}-${String(competencia.mes).padStart(2, '0')}`
+  const verTudo = perfil?.ver_tudo === true
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
 
-  // Filtro por unidade para qualquer role que não seja 'rede'
-  const isRestrito = perfil?.role !== 'rede'
+  // ver_tudo (Julia e Nico) veem tudo; rede sem ver_tudo vê todas as unidades mas só seus setores
+  const isRestrito = !verTudo && perfil?.role !== 'rede'
   const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
 
   const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia, unidadeIdsPermitidas)
@@ -493,7 +494,7 @@ export function Avaliacoes() {
 
       {loadOp ? <LoadingSpinner text="Carregando visitas..." /> : (
         <>
-          {(perfil?.role === 'rede' || setoresPermitidos.length > 0) && (
+          {(verTudo || setoresPermitidos.length > 0) && (
           <SecaoColapsavel titulo="Operacional" meta="visitas/mês por setor">
             {notasVisiveis.map((nu) => {
               const metaUnidade = metaOperacional(nu.unidade_nome)
@@ -528,7 +529,7 @@ export function Avaliacoes() {
           </SecaoColapsavel>
           )}
 
-          {(perfil?.role === 'rede' || podeNutri) && (
+          {(verTudo || podeNutri) && (
           <SecaoColapsavel titulo="Seg. Alimentar & 5S" meta="meta: 4/mês · Nova Veneza: 1">
             {notasVisiveis.map((nu) => {
               const meta = metaNutri(nu.unidade_nome)

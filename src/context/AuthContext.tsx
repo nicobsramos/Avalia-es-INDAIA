@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const resultado = await Promise.race([
         supabase
           .from('usuarios')
-          .select('id, nome, role, setores_avaliacao, pode_nutri, status, unidades_ids')
+          .select('id, nome, role, setores_avaliacao, pode_nutri, status, unidades_ids, ver_tudo')
           .eq('id', userId)
           .single()
           .then((r) => r.data),

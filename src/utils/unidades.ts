@@ -3,7 +3,7 @@
 
 export const UNIDADES = [
   { nome: 'BC – Matte',             inde: 'INDE08', novaVeneza: false },
-  { nome: 'Blumen – Principal',     inde: 'INDE05', novaVeneza: false },
+  { nome: 'Blumenau',               inde: 'INDE05', novaVeneza: false },
   { nome: 'Floripa – Canto',        inde: 'INDE03', novaVeneza: false },
   { nome: 'Floripa – Mediterrâneo', inde: 'INDE10', novaVeneza: false },
   { nome: 'Floripa – Mirante',      inde: 'INDE02', novaVeneza: false },
@@ -37,7 +37,7 @@ const META_OPERACIONAL: Record<string, number> = {
   'Floripa – Canto':    2,
   'Joinville':          2,
   'Joinville – Villa':  2,
-  'Blumen – Principal': 2,
+  'Blumenau': 2,
   'Nova Veneza':        1,
 }
 
@@ -52,7 +52,7 @@ const META_NUTRI: Record<string, number> = {
   'Floripa – Canto':    3,
   'Joinville':          3,
   'Joinville – Villa':  3,
-  'Blumen – Principal': 3,
+  'Blumenau': 3,
   'Nova Veneza':        1,
 }
 

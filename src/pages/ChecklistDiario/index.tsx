@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useChecklistList, useChecklistCompliance } from '../../hooks/useChecklistDiario'
+import { useChecklistList, useChecklistCompliance, toChecklistSetores } from '../../hooks/useChecklistDiario'
 import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -192,9 +192,9 @@ function ViewLider() {
   )
 }
 
-function ViewRede() {
+function ViewRede({ setores }: { setores?: string[] | null }) {
   const navigate = useNavigate()
-  const { data: compliance, isLoading, error } = useChecklistCompliance()
+  const { data: compliance, isLoading, error } = useChecklistCompliance(undefined, setores)
   const { data: lista, isLoading: loadLista } = useChecklistList()
   if (isLoading || loadLista) return <LoadingSpinner text="Carregando..." />
   if (error) return (
@@ -291,7 +291,11 @@ export function ChecklistDiario() {
   const { perfil } = useAuth()
   const [tab, setTab] = useState<'semana' | 'historico'>('semana')
 
-  if (perfil?.role === 'rede') return <ViewRede />
+  if (perfil?.role === 'rede') {
+    const verTudo = perfil?.ver_tudo === true
+    const setores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
+    return <ViewRede setores={setores} />
+  }
 
   void tab
   void setTab

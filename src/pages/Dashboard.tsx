@@ -164,11 +164,10 @@ export function Dashboard() {
   const { competencia } = useCompetencia()
   const { perfil } = useAuth()
 
-  const isRestrito = perfil?.role !== 'rede'
+  const verTudo = perfil?.ver_tudo === true
+  const isRestrito = !verTudo && perfil?.role !== 'rede'
   const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
-  const checklistSetores = isRestrito
-    ? toChecklistSetores(perfil?.setores_avaliacao ?? [])
-    : null
+  const checklistSetores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
 
   const compAnt = useMemo(() => competenciaAnterior(competencia), [competencia])
 
@@ -278,8 +277,8 @@ export function Dashboard() {
         )}
       </section>
 
-      {/* CHECKLIST DIÁRIO — hidden for restricted users with no checklist sectors */}
-      {(!isRestrito || (checklistSetores && checklistSetores.length > 0)) && (
+      {/* CHECKLIST DIÁRIO — hidden when user has no checklist sectors */}
+      {(verTudo || !checklistSetores || checklistSetores.length > 0) && (
         <section>
           <SecaoHeader
             label={`Checklist Diário${checklistSetores && checklistSetores.length > 0 ? ` — ${checklistSetores.join(', ')}` : ''}`}
