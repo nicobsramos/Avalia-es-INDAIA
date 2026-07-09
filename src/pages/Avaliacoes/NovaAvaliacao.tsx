@@ -35,8 +35,14 @@ export function NovaAvaliacao() {
 
   const [unidadeId, setUnidadeId] = useState('')
   const [dataVisita, setDataVisita] = useState(() => new Date().toISOString().slice(0, 10))
+  const [setorSelecionadoId, setSetorSelecionadoId] = useState('')
   const [itensState, setItensState] = useState<Record<string, ItemState>>({})
   const [salvando, setSalvando] = useState(false)
+
+  // Se há múltiplos setores, filtra pelo selecionado; senão usa todos
+  const setoresFiltrados = setorSelecionadoId
+    ? setoresComItens.filter((sc) => sc.setor.id === setorSelecionadoId)
+    : setoresComItens
   const [erro, setErro] = useState('')
   const [passo, setPasso] = useState<1 | 2>(1)
 
@@ -74,7 +80,7 @@ export function NovaAvaliacao() {
     setErro('')
 
     const respostas: RespostaItem[] = []
-    for (const sc of setoresComItens ?? []) {
+    for (const sc of setoresFiltrados) {
       for (const secao of sc.secoes) {
         for (const item of secao.itens) {
           const st = itensState[item.id]
@@ -196,10 +202,36 @@ export function NovaAvaliacao() {
               className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
+
+          {setoresComItens.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de avaliação</label>
+              <div className="space-y-2">
+                {setoresComItens.map((sc) => {
+                  const selecionado = setorSelecionadoId === sc.setor.id
+                  const label = sc.setor.nome.replace(/^Atendimento\s*[-–]\s*/i, '')
+                  return (
+                    <button
+                      key={sc.setor.id}
+                      type="button"
+                      onClick={() => setSetorSelecionadoId(sc.setor.id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
+                        selecionado
+                          ? 'border-brand-500 bg-brand-50 text-brand-800'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-semibold text-sm">{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <button
-          disabled={!unidadeId}
+          disabled={!unidadeId || (setoresComItens.length > 1 && !setorSelecionadoId)}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
@@ -221,12 +253,17 @@ export function NovaAvaliacao() {
           <p className="font-semibold text-gray-900 truncate text-sm">
             {(unidades ?? []).find((u) => u.id === unidadeId)?.nome ?? ''}
           </p>
-          <p className="text-xs text-gray-400">{dataVisita.split('-').reverse().join('/')}</p>
+          <p className="text-xs text-gray-400">
+            {dataVisita.split('-').reverse().join('/')}
+            {setorSelecionadoId && setoresFiltrados[0] && (
+              <> · {setoresFiltrados[0].setor.nome.replace(/^Atendimento\s*[-–]\s*/i, '')}</>
+            )}
+          </p>
         </div>
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
-        {setoresComItens.length === 0 && (
+        {setoresFiltrados.length === 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center space-y-2">
             <p className="text-sm font-semibold text-amber-800">Nenhum setor disponível para avaliação</p>
             <p className="text-xs text-amber-700">
@@ -235,7 +272,7 @@ export function NovaAvaliacao() {
             </p>
           </div>
         )}
-        {(setoresComItens ?? []).map((sc) => (
+        {setoresFiltrados.map((sc) => (
           <div key={sc.setor.id} className="space-y-5">
             <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
