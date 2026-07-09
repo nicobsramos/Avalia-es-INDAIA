@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useChecklistList, useChecklistCompliance, diasDecorridosSemana } from '../../hooks/useChecklistDiario'
+import { useChecklistList, useChecklistCompliance } from '../../hooks/useChecklistDiario'
 import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -196,8 +196,6 @@ function ViewRede() {
   const navigate = useNavigate()
   const { data: compliance, isLoading, error } = useChecklistCompliance()
   const { data: lista, isLoading: loadLista } = useChecklistList()
-  const diasDecorridos = diasDecorridosSemana()
-
   if (isLoading || loadLista) return <LoadingSpinner text="Carregando..." />
   if (error) return (
     <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-4">
@@ -225,11 +223,11 @@ function ViewRede() {
       {/* Compliance da semana */}
       <section>
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
-          Semana atual — preenchimentos (seg a hoje)
+          Semana atual — preenchimentos (seg a dom)
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {(compliance ?? []).map((u) => {
-            const esperado = Math.min(diasDecorridos, u.dias_operacao_semana)
+            const esperado = 6
             return (
               <div
                 key={u.unidade_id}

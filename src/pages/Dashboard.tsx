@@ -4,7 +4,7 @@ import { useCompetencia } from '../context/CompetenciaContext'
 import { useDashboard } from '../hooks/useDashboard'
 import { useSegAlimentar } from '../hooks/useSegAlimentar'
 import { useNutriReport } from '../hooks/useNutriAvaliacoes'
-import { useChecklistCompliance, diasDecorridosSemana } from '../hooks/useChecklistDiario'
+import { useChecklistCompliance } from '../hooks/useChecklistDiario'
 import { useAuth } from '../context/AuthContext'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
@@ -108,15 +108,13 @@ function SecaoHeader({ label, nota, variacao }: { label: string; nota: number | 
   )
 }
 
-function CardChecklistCompliance({ unidade_id, unidade_nome, abertura, fechamento, dias_operacao_semana }: {
+function CardChecklistCompliance({ unidade_id, unidade_nome, abertura, fechamento }: {
   unidade_id: string
   unidade_nome: string
   abertura: number
   fechamento: number
-  dias_operacao_semana: number
 }) {
-  const diasDecorridos = diasDecorridosSemana()
-  const esperado = Math.min(diasDecorridos, dias_operacao_semana)
+  const esperado = 6
 
   function corBarra(count: number) {
     if (count >= esperado) return 'bg-green-500'
