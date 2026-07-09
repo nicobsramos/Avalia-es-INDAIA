@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
-import { bgCorClasse, corClasse, formatarNota, variacaoSeta, variacaoCorClasse } from '../utils/notas'
+import { bgCorClasse, corClasse, formatarNota, variacaoSeta, variacaoCorClasse, competenciaAnterior } from '../utils/notas'
 import { DB_TO_SHEET } from '../utils/unidades'
 import type { NotaUnidade, Competencia } from '../types'
 import { notaRede2524 } from '../utils/sheetsParser'
@@ -167,9 +167,13 @@ export function Dashboard() {
   const isRestrito = perfil?.role !== 'rede'
   const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
 
+  const compAnt = useMemo(() => competenciaAnterior(competencia), [competencia])
+
   const { notasUnidades, notaRede, variacao, loading: loadOp, error: errOp } = useDashboard(competencia, unidadeIdsPermitidas)
   const { rows: sheetsRows, loading: loadNutriSheets, error: errNutri } = useSegAlimentar(competencia)
+  const { rows: sheetsRowsAnt } = useSegAlimentar(compAnt)
   const { data: dbNutri, isLoading: loadNutriDB } = useNutriReport(competencia, unidadeIdsPermitidas)
+  const { data: dbNutriAnt } = useNutriReport(compAnt, unidadeIdsPermitidas)
   const { data: compliance, isLoading: loadCompliance } = useChecklistCompliance(unidadeIdsPermitidas)
 
   // Deriva nomes de unidades permitidas para filtrar dados de planilha
@@ -200,7 +204,23 @@ export function Dashboard() {
     return [...dbRows, ...extraSheets].sort((a, b) => a.unidade.localeCompare(b.unidade))
   }, [dbNutri, sheetsRows, permittedSheetKeys])
 
+  const rowsAnt = useMemo<NotaOperacao[]>(() => {
+    const dbRowsAnt: NotaOperacao[] = (dbNutriAnt ?? []).map((u) => ({
+      unidade: u.unidade_nome, Cozinha: u.Cozinha, Bar: u.Bar, Atendimento: u.Atendimento,
+      consolidado: u.consolidado, visitas: u.visitas,
+    }))
+    const dbNamesAnt = new Set(dbRowsAnt.map((r) => r.unidade.toLowerCase()))
+    const filteredSheetsAnt = permittedSheetKeys
+      ? sheetsRowsAnt.filter((r) => matchSheet(r.unidade, permittedSheetKeys))
+      : sheetsRowsAnt
+    return [...dbRowsAnt, ...filteredSheetsAnt.filter((r) => !dbNamesAnt.has(r.unidade.toLowerCase()))]
+  }, [dbNutriAnt, sheetsRowsAnt, permittedSheetKeys])
+
   const notaRedeNutri = useMemo(() => notaRede2524(rows), [rows])
+  const notaRedeNutriAnt = useMemo(() => notaRede2524(rowsAnt), [rowsAnt])
+  const variacaoNutri = notaRedeNutri != null && notaRedeNutriAnt != null
+    ? notaRedeNutri - notaRedeNutriAnt
+    : null
   const loadNutri = loadNutriSheets || loadNutriDB
   const [modal, setModal] = useState<ModalState>(null)
 
@@ -237,7 +257,7 @@ export function Dashboard() {
 
       {/* SEG. ALIMENTAR & 5S */}
       <section>
-        <SecaoHeader label="Seg. Alimentar & 5S" nota={notaRedeNutri} />
+        <SecaoHeader label="Seg. Alimentar & 5S" nota={notaRedeNutri} variacao={variacaoNutri} />
         {loadNutri ? (
           <LoadingSpinner text="Carregando..." />
         ) : errNutri ? (
