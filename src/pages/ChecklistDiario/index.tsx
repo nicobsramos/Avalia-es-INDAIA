@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useChecklistList, useChecklistCompliance } from '../../hooks/useChecklistDiario'
+import { useChecklistList, useChecklistCompliance, useDeleteChecklist } from '../../hooks/useChecklistDiario'
 import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+
+const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -194,8 +196,12 @@ function ViewLider() {
 
 function ViewRede({ setores }: { setores?: string[] | null }) {
   const navigate = useNavigate()
+  const { user, perfil } = useAuth()
   const { data: compliance, isLoading, error } = useChecklistCompliance(undefined, setores)
   const { data: lista, isLoading: loadLista } = useChecklistList()
+  const deletar = useDeleteChecklist()
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+
   if (isLoading || loadLista) return <LoadingSpinner text="Carregando..." />
   if (error) return (
     <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-4">
@@ -203,7 +209,13 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
     </div>
   )
 
+  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
   const historico = (lista ?? []).slice(0, 50)
+
+  async function handleDelete(id: string) {
+    await deletar.mutateAsync(id)
+    setConfirmandoId(null)
+  }
 
   return (
     <div className="px-4 py-6 max-w-5xl mx-auto space-y-6">
@@ -261,24 +273,53 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
           </p>
           <div className="space-y-2">
             {historico.map((c) => (
-              <Link
-                key={c.id}
-                to={`/checklist-diario/${c.id}`}
-                className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-brand-400 hover:shadow-sm transition-all"
-              >
-                <div>
-                  <p className="text-xs text-gray-500">{formatarData(c.data_operacao)}</p>
-                  <p className="text-sm font-medium text-gray-900">{(c as any).unidade?.nome ?? ''}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COR[c.tipo]}`}>
-                    {TIPO_LABEL[c.tipo]}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
+              <div key={c.id} className="flex items-center bg-white border border-gray-200 rounded-xl hover:border-brand-400 hover:shadow-sm transition-all">
+                <Link
+                  to={`/checklist-diario/${c.id}`}
+                  className="flex-1 flex items-center justify-between px-4 py-3 min-w-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">{formatarData(c.data_operacao)}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{(c as any).unidade?.nome ?? ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COR[c.tipo]}`}>
+                      {TIPO_LABEL[c.tipo]}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+                {podeApagar && (
+                  <div className="shrink-0 pr-3">
+                    {confirmandoId === c.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          disabled={deletar.isPending}
+                          className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-md disabled:opacity-50"
+                        >
+                          {deletar.isPending ? '...' : 'Confirmar'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-1 py-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmandoId(c.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Apagar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </section>
