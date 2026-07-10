@@ -15,7 +15,7 @@ interface UsuarioAtivo {
   email: string
   role: string
   status: string
-  unidades_ids: string[]
+  unidades_ids: string[] | null
   setores_avaliacao: string[]
   pode_nutri: boolean
 }
@@ -177,7 +177,7 @@ export function AdminSolicitacoes() {
     usuarios.filter((u) => {
       if (filtroSetor && !u.setores_avaliacao.includes(filtroSetor)) return false
       if (filtroCidade) {
-        if (u.unidades_ids.length === 0) return true
+        if (!u.unidades_ids || u.unidades_ids.length === 0) return true
         const cidadesDoUsuario = u.unidades_ids
           .map((id) => unidades.find((un) => un.id === id)?.nome ?? '')
           .map((nome) => extractCidade(nome))
