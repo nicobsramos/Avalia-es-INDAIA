@@ -40,7 +40,7 @@ export function DetalheAvaliacao() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const isAdmin = user?.email === ADMIN_EMAIL
-  const canEdit = isAdmin || perfil?.role === 'rede'
+  const canEdit = isAdmin || perfil?.ver_tudo === true
 
   const [deletando, setDeletando] = useState(false)
   const [editando, setEditando] = useState(false)

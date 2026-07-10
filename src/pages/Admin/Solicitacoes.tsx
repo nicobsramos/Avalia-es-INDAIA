@@ -402,12 +402,11 @@ export function AdminSolicitacoes() {
               </label>
             </div>
 
-            {/* Unidades (visibilidade — para role leitura) */}
-            {editRole === 'leitura' && (
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">
-                  Unidades com acesso
-                </label>
+            {/* Unidades com acesso */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">
+                Unidades com acesso <span className="font-normal text-gray-400">(deixe vazio para todas)</span>
+              </label>
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {unidades.map((u) => {
                     const marcada = editUnidades.includes(u.id)
@@ -428,9 +427,8 @@ export function AdminSolicitacoes() {
                     )
                   })}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">{editUnidades.length} de {unidades.length} selecionadas</p>
-              </div>
-            )}
+                <p className="text-xs text-gray-400 mt-1">{editUnidades.length === 0 ? 'Todas as unidades' : `${editUnidades.length} de ${unidades.length} selecionadas`}</p>
+            </div>
 
             <div className="flex gap-3 pt-1">
               <button onClick={() => setEditandoUser(null)}

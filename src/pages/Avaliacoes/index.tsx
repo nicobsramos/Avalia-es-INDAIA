@@ -88,7 +88,7 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
   const queryClient = useQueryClient()
   const { data: avaliacoes, isLoading } = useHistoricoOp(competencia, unidadeIds)
   const [deletingAv, setDeletingAv] = useState<string | null>(null)
-  const canDelete = user?.email === ADMIN_EMAIL || perfil?.role === 'rede'
+  const canDelete = user?.email === ADMIN_EMAIL || perfil?.ver_tudo === true
 
   async function handleDelete(avaliacaoId: string) {
     if (!confirm('Apagar este lançamento? Esta ação não pode ser desfeita.')) return
@@ -428,13 +428,10 @@ export function Avaliacoes() {
     }
   }, [opcoes])
   const valor = `${competencia.ano}-${String(competencia.mes).padStart(2, '0')}`
-  const verTudo = perfil?.ver_tudo === true || (perfil?.role === 'rede' && perfil?.ver_tudo == null)
+  const verTudo = perfil?.ver_tudo === true
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
-
-  // ver_tudo (Julia e Nico) veem tudo; rede sem ver_tudo vê todas as unidades mas só seus setores
-  const isRestrito = !verTudo && perfil?.role !== 'rede'
-  const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
+  const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
 
   const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia, unidadeIdsPermitidas)
   const { data: nutriCounts = {} } = useNutriCounts(competencia)
