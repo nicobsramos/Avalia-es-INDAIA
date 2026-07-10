@@ -62,6 +62,8 @@ export function metaNutri(nome: string): number {
 
 // Meta de visitas por mês por setor (substitui a meta geral para setores específicos)
 const META_SETOR_OP: Record<string, number> = {
+  'Cozinha':                         1,
+  'Bar':                             1,
   'Atendimento - Maitres':           1,
   'Atendimento - Maitres Checklist': 4,
   'Atendimento - Pré evento':        1,
