@@ -151,7 +151,7 @@ export function AdminSolicitacoes() {
           userId: editandoUser.id,
           nome: editNome.trim() || editandoUser.nome,
           role: editRole,
-          unidades_ids: editUnidades,
+          unidades_ids: editUnidades.length > 0 ? editUnidades : null,
           setores_avaliacao: editSetores,
           pode_nutri: editPodeNutri,
         }),
@@ -159,7 +159,7 @@ export function AdminSolicitacoes() {
       if (!res.ok) { alert('Erro ao salvar.'); return }
       setUsuarios((prev) => prev.map((u) =>
         u.id === editandoUser.id
-          ? { ...u, nome: editNome.trim() || u.nome, role: editRole, unidades_ids: editUnidades, setores_avaliacao: editSetores, pode_nutri: editPodeNutri }
+          ? { ...u, nome: editNome.trim() || u.nome, role: editRole, unidades_ids: editUnidades.length > 0 ? editUnidades : null, setores_avaliacao: editSetores, pode_nutri: editPodeNutri }
           : u
       ))
       setEditandoUser(null)
