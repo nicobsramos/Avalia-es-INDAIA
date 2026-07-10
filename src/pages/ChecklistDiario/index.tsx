@@ -92,10 +92,12 @@ function CardUnidadeHoje({
 
 function ViewLider() {
   const navigate = useNavigate()
-  const { perfil } = useAuth()
+  const { user, perfil } = useAuth()
   const unidadeIds = perfil?.unidades_ids
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds)
   const { data: lista, isLoading: loadLista, error } = useChecklistList(unidadeIds)
+  const deletar = useDeleteChecklist()
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
   if (loadUnidades || loadLista) return <LoadingSpinner text="Carregando..." />
   if (error) return (
@@ -104,8 +106,14 @@ function ViewLider() {
     </div>
   )
 
+  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
   const hoje = (lista ?? []).filter((c) => c.data_operacao === TODAY)
   const historico = (lista ?? []).filter((c) => c.data_operacao !== TODAY)
+
+  async function handleDelete(id: string) {
+    await deletar.mutateAsync(id)
+    setConfirmandoId(null)
+  }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
@@ -151,28 +159,53 @@ function ViewLider() {
           </p>
           <div className="space-y-2">
             {historico.map((c) => (
-              <Link
-                key={c.id}
-                to={`/checklist-diario/${c.id}`}
-                className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-brand-400 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center gap-3">
+              <div key={c.id} className="flex items-center bg-white border border-gray-200 rounded-xl hover:border-brand-400 hover:shadow-sm transition-all">
+                <Link
+                  to={`/checklist-diario/${c.id}`}
+                  className="flex-1 flex items-center justify-between px-4 py-3 min-w-0"
+                >
                   <div>
                     <p className="text-xs text-gray-500">{formatarData(c.data_operacao)}</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {(c as any).unidade?.nome ?? ''}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900">{(c as any).unidade?.nome ?? ''}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COR[c.tipo]}`}>
-                    {TIPO_LABEL[c.tipo]}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COR[c.tipo]}`}>
+                      {TIPO_LABEL[c.tipo]}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+                {podeApagar && (
+                  <div className="shrink-0 pr-3">
+                    {confirmandoId === c.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          disabled={deletar.isPending}
+                          className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-md disabled:opacity-50"
+                        >
+                          {deletar.isPending ? '...' : 'Confirmar'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-1 py-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmandoId(c.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Apagar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </section>
