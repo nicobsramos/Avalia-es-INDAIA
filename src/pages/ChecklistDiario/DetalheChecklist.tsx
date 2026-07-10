@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useChecklistDetalhe, useChecklistItens } from '../../hooks/useChecklistDiario'
+import { useChecklistDetalhe, useChecklistItens, useDeleteChecklist } from '../../hooks/useChecklistDiario'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento' }
@@ -17,9 +18,11 @@ function formatarData(iso: string) {
 export function DetalheChecklist() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, perfil } = useAuth()
   const { data, isLoading, error } = useChecklistDetalhe(id)
   const { data: itens } = useChecklistItens(data?.checklist.tipo ?? 'abertura')
+  const deletar = useDeleteChecklist()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   if (isLoading) return (
     <div className="px-4 py-6">
@@ -57,6 +60,12 @@ export function DetalheChecklist() {
   }, [])
 
   const podeEditar = checklist.usuario_id === user?.id
+  const podeApagar = perfil?.ver_tudo === true
+
+  async function handleDelete() {
+    await deletar.mutateAsync(id!)
+    navigate('/checklist-diario')
+  }
 
   return (
     <div className="pb-8">
@@ -80,14 +89,41 @@ export function DetalheChecklist() {
             {formatarData(checklist.data_operacao)} • {checklist.responsavel}
           </p>
         </div>
-        {podeEditar && (
-          <Link
-            to={`/checklist-diario/novo?tipo=${checklist.tipo}&unidade_id=${checklist.unidade_id}`}
-            className="text-xs text-brand-600 hover:underline font-semibold shrink-0"
-          >
-            Editar
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {podeEditar && (
+            <Link
+              to={`/checklist-diario/novo?tipo=${checklist.tipo}&unidade_id=${checklist.unidade_id}`}
+              className="text-xs text-brand-600 hover:underline font-semibold"
+            >
+              Editar
+            </Link>
+          )}
+          {podeApagar && !confirmDelete && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs text-red-500 hover:text-red-700 font-semibold"
+            >
+              Apagar
+            </button>
+          )}
+          {podeApagar && confirmDelete && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleDelete}
+                disabled={deletar.isPending}
+                className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold px-2 py-1 rounded-md disabled:opacity-50"
+              >
+                {deletar.isPending ? '...' : 'Confirmar'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-xs text-gray-400 hover:text-gray-600 font-semibold px-2 py-1"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="px-4 py-4 max-w-lg mx-auto space-y-6">

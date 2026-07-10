@@ -279,3 +279,29 @@ export function useSalvarChecklist() {
     },
   })
 }
+
+export function useDeleteChecklist() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: r1 } = await (supabase as any)
+        .from('checklist_cozinha_respostas')
+        .delete()
+        .eq('checklist_id', id)
+      if (r1) throw r1
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: r2 } = await (supabase as any)
+        .from('checklist_cozinha')
+        .delete()
+        .eq('id', id)
+      if (r2) throw r2
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklist-cozinha-list'] })
+      queryClient.invalidateQueries({ queryKey: ['checklist-compliance'] })
+      queryClient.invalidateQueries({ queryKey: ['checklist-existente'] })
+      queryClient.invalidateQueries({ queryKey: ['checklist-cozinha-detalhe'] })
+    },
+  })
+}
