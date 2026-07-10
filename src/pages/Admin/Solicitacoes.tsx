@@ -34,9 +34,9 @@ function extractCidade(unitNome: string): string {
   return unitNome.split(' – ')[0]
 }
 
-const ROLE_LABEL: Record<string, string> = { rede: 'Rede', lider: 'Líder', leitura: 'Leitura' }
+const ROLE_LABEL: Record<string, string> = { rede: 'Líder', lider: 'Líder', leitura: 'Leitura' }
 const ROLE_COR: Record<string, string> = {
-  rede:    'bg-purple-100 text-purple-700',
+  rede:    'bg-blue-100 text-blue-700',
   lider:   'bg-blue-100 text-blue-700',
   leitura: 'bg-gray-100 text-gray-500',
 }
@@ -58,7 +58,7 @@ export function AdminSolicitacoes() {
   // Modal de edição
   const [editandoUser, setEditandoUser] = useState<UsuarioAtivo | null>(null)
   const [editNome, setEditNome] = useState('')
-  const [editRole, setEditRole] = useState<'rede' | 'lider' | 'leitura'>('lider')
+  const [editRole, setEditRole] = useState<'lider' | 'leitura'>('lider')
   const [editUnidades, setEditUnidades] = useState<string[]>([])
   const [editSetores, setEditSetores] = useState<string[]>([])
   const [editPodeNutri, setEditPodeNutri] = useState(false)
@@ -121,7 +121,7 @@ export function AdminSolicitacoes() {
   function abrirEdicao(u: UsuarioAtivo) {
     setEditandoUser(u)
     setEditNome(u.nome)
-    setEditRole(u.role as 'rede' | 'lider' | 'leitura')
+    setEditRole(u.role === 'leitura' ? 'leitura' : 'lider')
     setEditUnidades(u.unidades_ids ?? [])
     setEditSetores(u.setores_avaliacao ?? [])
     setEditPodeNutri(u.pode_nutri ?? false)
@@ -342,7 +342,7 @@ export function AdminSolicitacoes() {
             <div>
               <label className="text-xs font-medium text-gray-500 mb-2 block">Perfil de acesso</label>
               <div className="flex gap-2">
-                {(['lider', 'rede', 'leitura'] as const).map((r) => (
+                {(['lider', 'leitura'] as const).map((r) => (
                   <button
                     key={r}
                     onClick={() => setEditRole(r)}

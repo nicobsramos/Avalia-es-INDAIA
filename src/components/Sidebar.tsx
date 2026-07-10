@@ -117,7 +117,7 @@ export function Sidebar({ open, onClose }: Props) {
         <div className="px-4 py-4 border-t border-brand-800">
           <div className="mb-3">
             <p className="text-sm font-medium text-white truncate">{perfil?.nome ?? '—'}</p>
-            <p className="text-xs text-brand-300 capitalize">{perfil?.role ?? ''}</p>
+            <p className="text-xs text-brand-300">{perfil?.ver_tudo ? 'Admin' : perfil?.role === 'leitura' ? 'Leitura' : 'Líder'}</p>
           </div>
           <button
             onClick={signOut}
