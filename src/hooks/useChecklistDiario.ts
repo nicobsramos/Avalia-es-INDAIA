@@ -284,18 +284,16 @@ export function useDeleteChecklist() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: r1 } = await (supabase as any)
-        .from('checklist_cozinha_respostas')
-        .delete()
-        .eq('checklist_id', id)
-      if (r1) throw r1
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: r2 } = await (supabase as any)
-        .from('checklist_cozinha')
-        .delete()
-        .eq('id', id)
-      if (r2) throw r2
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token ?? ''
+      const res = await fetch(`/api/delete-checklist?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string }).error ?? 'Erro ao apagar')
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checklist-cozinha-list'] })

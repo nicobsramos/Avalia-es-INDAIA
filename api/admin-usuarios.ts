@@ -41,19 +41,22 @@ export default async function handler(req: any, res: any) {
       if (users.length < 1000) break
       page++
     }
-    const emailMap: Record<string, string> = {}
-    for (const u of allAuthUsers) emailMap[u.id] = u.email ?? ''
+    const authMap: Record<string, { email: string; last_sign_in_at: string | null }> = {}
+    for (const u of allAuthUsers) {
+      authMap[u.id] = { email: u.email ?? '', last_sign_in_at: u.last_sign_in_at ?? null }
+    }
 
     return res.json({
       usuarios: (rows ?? []).map((u: any) => ({
         id: u.id,
         nome: u.nome,
-        email: emailMap[u.id] ?? '',
+        email: authMap[u.id]?.email ?? '',
         role: u.role,
         status: u.status,
         unidades_ids: u.unidades_ids ?? [],
         setores_avaliacao: u.setores_avaliacao ?? [],
         pode_nutri: u.pode_nutri ?? false,
+        ultimo_acesso: authMap[u.id]?.last_sign_in_at ?? null,
       })),
       unidades: unidades ?? [],
       setores: (setoresRows ?? []).map((s: any) => s.nome),

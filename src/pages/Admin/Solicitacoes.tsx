@@ -18,6 +18,19 @@ interface UsuarioAtivo {
   unidades_ids: string[] | null
   setores_avaliacao: string[]
   pode_nutri: boolean
+  ultimo_acesso: string | null
+}
+
+function formatarUltimoAcesso(iso: string | null): string {
+  if (!iso) return 'Nunca acessou'
+  const d = new Date(iso)
+  const hoje = new Date()
+  const diffMs = hoje.getTime() - d.getTime()
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDias === 0) return 'Hoje às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  if (diffDias === 1) return 'Ontem às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  if (diffDias < 7) return `Há ${diffDias} dias`
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 interface Unidade {
@@ -194,7 +207,7 @@ export function AdminSolicitacoes() {
       {/* ── Solicitações pendentes ── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Solicitações de acesso</h2>
+          <h2 className="text-xl font-bold text-gray-900">Acessos pendentes</h2>
           <button onClick={carregar} className="text-sm text-brand-600 hover:underline flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -310,6 +323,9 @@ export function AdminSolicitacoes() {
                       Setores: {u.setores_avaliacao.join(', ')}
                     </p>
                   )}
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {formatarUltimoAcesso(u.ultimo_acesso)}
+                  </p>
                 </div>
                 <button onClick={() => abrirEdicao(u)}
                   className="shrink-0 text-xs text-brand-600 hover:text-brand-700 font-medium px-2 py-1 rounded hover:bg-brand-50 transition-colors">
