@@ -164,7 +164,8 @@ export function Dashboard() {
   const { competencia } = useCompetencia()
   const { perfil } = useAuth()
 
-  const verTudo = perfil?.ver_tudo === true
+  // ver_tudo=true → acesso total; ver_tudo=null (coluna ainda não existe no banco) + rede → acesso total por compatibilidade
+  const verTudo = perfil?.ver_tudo === true || (perfil?.role === 'rede' && perfil?.ver_tudo == null)
   const isRestrito = !verTudo && perfil?.role !== 'rede'
   const unidadeIdsPermitidas: string[] | null = isRestrito ? (perfil?.unidades_ids ?? []) : null
   const checklistSetores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])

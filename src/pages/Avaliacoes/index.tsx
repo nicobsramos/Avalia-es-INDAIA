@@ -428,7 +428,7 @@ export function Avaliacoes() {
     }
   }, [opcoes])
   const valor = `${competencia.ano}-${String(competencia.mes).padStart(2, '0')}`
-  const verTudo = perfil?.ver_tudo === true
+  const verTudo = perfil?.ver_tudo === true || (perfil?.role === 'rede' && perfil?.ver_tudo == null)
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
 

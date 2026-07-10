@@ -292,7 +292,7 @@ export function ChecklistDiario() {
   const [tab, setTab] = useState<'semana' | 'historico'>('semana')
 
   if (perfil?.role === 'rede') {
-    const verTudo = perfil?.ver_tudo === true
+    const verTudo = perfil?.ver_tudo === true || perfil?.ver_tudo == null
     const setores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
     return <ViewRede setores={setores} />
   }
