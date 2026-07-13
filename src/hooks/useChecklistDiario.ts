@@ -61,8 +61,8 @@ export function diasDecorridosSemana(): number {
 export function toChecklistSetores(setoresAvaliacao: string[]): string[] {
   const result = new Set<string>()
   for (const s of setoresAvaliacao) {
-    if (s === 'Cozinha') result.add('Cozinha')
-    else if (s === 'Bar') result.add('Bar')
+    if (s.startsWith('Cozinha')) result.add('Cozinha')
+    else if (s.startsWith('Bar')) result.add('Bar')
     else if (s.startsWith('Atendimento')) result.add('Atendimento')
   }
   return Array.from(result)
