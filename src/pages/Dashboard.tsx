@@ -22,8 +22,27 @@ function avgNulls(arr: (number | null)[]): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
 }
 
-function CardOp({ nu, onClick }: { nu: NotaUnidade; onClick: () => void }) {
-  const setores = nu.notas_setores.filter((ns) => SETORES_OP.includes(ns.setor_nome))
+// Maps setores_avaliacao values to the 3 dashboard-level sector names
+function toSetoresDashboard(setoresAvaliacao: string[]): string[] {
+  const result = new Set<string>()
+  for (const s of setoresAvaliacao) {
+    if (s === 'Cozinha') result.add('Cozinha')
+    else if (s === 'Bar') result.add('Bar')
+    else if (s.startsWith('Atendimento')) result.add('Atendimento')
+  }
+  return Array.from(result)
+}
+
+function gridCols(n: number) {
+  if (n <= 1) return 'grid-cols-1'
+  if (n === 2) return 'grid-cols-2'
+  return 'grid-cols-3'
+}
+
+function CardOp({ nu, setoresFiltro, onClick }: { nu: NotaUnidade; setoresFiltro: string[] | null; onClick: () => void }) {
+  const setores = nu.notas_setores.filter((ns) =>
+    SETORES_OP.includes(ns.setor_nome) && (setoresFiltro === null || setoresFiltro.includes(ns.setor_nome))
+  )
   const consolidado = avgNulls(setores.map((ns) => ns.nota))
 
   return (
@@ -42,7 +61,7 @@ function CardOp({ nu, onClick }: { nu: NotaUnidade; onClick: () => void }) {
           </svg>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1 border-t border-gray-100 pt-3">
+      <div className={`grid ${gridCols(setores.length)} gap-1 border-t border-gray-100 pt-3`}>
         {setores.map((ns) => (
           <div key={ns.setor_id} className="text-center">
             <p className="text-xs text-gray-400 mb-0.5">{ns.setor_rotulo}</p>
@@ -54,8 +73,10 @@ function CardOp({ nu, onClick }: { nu: NotaUnidade; onClick: () => void }) {
   )
 }
 
-function CardNutri({ row, onClick }: { row: NotaOperacao; onClick: () => void }) {
-  const areas = ['Cozinha', 'Bar', 'Atendimento'] as const
+function CardNutri({ row, setoresFiltro, onClick }: { row: NotaOperacao; setoresFiltro: string[] | null; onClick: () => void }) {
+  const areas = (['Cozinha', 'Bar', 'Atendimento'] as const).filter(
+    (a) => setoresFiltro === null || setoresFiltro.includes(a)
+  )
 
   return (
     <button
@@ -73,7 +94,7 @@ function CardNutri({ row, onClick }: { row: NotaOperacao; onClick: () => void })
           </svg>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1 border-t border-gray-100 pt-3">
+      <div className={`grid ${gridCols(areas.length)} gap-1 border-t border-gray-100 pt-3`}>
         {areas.map((area) => (
           <div key={area} className="text-center">
             <p className="text-xs text-gray-400 mb-0.5">{area}</p>
@@ -167,6 +188,8 @@ export function Dashboard() {
   const verTudo = perfil?.ver_tudo === true
   const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
   const checklistSetores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
+  // null = sem filtro (ver_tudo); array com nomes dos setores dashboard visíveis
+  const setoresDash: string[] | null = verTudo ? null : toSetoresDashboard(perfil?.setores_avaliacao ?? [])
 
   const compAnt = useMemo(() => competenciaAnterior(competencia), [competencia])
 
@@ -226,8 +249,25 @@ export function Dashboard() {
   const [modal, setModal] = useState<ModalState>(null)
 
   const unidadesComDados = notasUnidades.filter((nu) =>
-    nu.notas_setores.some((ns) => SETORES_OP.includes(ns.setor_nome) && ns.nota !== null)
+    nu.notas_setores.some((ns) =>
+      SETORES_OP.includes(ns.setor_nome) &&
+      (setoresDash === null || setoresDash.includes(ns.setor_nome)) &&
+      ns.nota !== null
+    )
   )
+
+  // Nota de rede calculada apenas sobre os setores visíveis para este usuário
+  const notaRedeSetores = useMemo(() => {
+    if (setoresDash === null) return notaRede
+    const consolidados = unidadesComDados.map((nu) =>
+      avgNulls(
+        nu.notas_setores
+          .filter((ns) => SETORES_OP.includes(ns.setor_nome) && setoresDash.includes(ns.setor_nome))
+          .map((ns) => ns.nota)
+      )
+    )
+    return avgNulls(consolidados)
+  }, [notaRede, unidadesComDados, setoresDash])
 
   return (
     <div className="px-4 py-6 max-w-7xl mx-auto space-y-8">
@@ -238,7 +278,7 @@ export function Dashboard() {
 
       {/* OPERACIONAL */}
       <section>
-        <SecaoHeader label="Operacional" nota={notaRede} variacao={variacao} />
+        <SecaoHeader label="Operacional" nota={notaRedeSetores} variacao={setoresDash === null ? variacao : null} />
         {loadOp ? (
           <LoadingSpinner text="Carregando..." />
         ) : errOp ? (
@@ -250,7 +290,7 @@ export function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {unidadesComDados.map((nu) => (
-              <CardOp key={nu.unidade_id} nu={nu} onClick={() => setModal({ tipo: 'operacional', unidade: nu })} />
+              <CardOp key={nu.unidade_id} nu={nu} setoresFiltro={setoresDash} onClick={() => setModal({ tipo: 'operacional', unidade: nu })} />
             ))}
           </div>
         )}
@@ -270,7 +310,7 @@ export function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {rows.map((row) => (
-              <CardNutri key={row.unidade} row={row} onClick={() => setModal({ tipo: 'nutri', row })} />
+              <CardNutri key={row.unidade} row={row} setoresFiltro={setoresDash} onClick={() => setModal({ tipo: 'nutri', row })} />
             ))}
           </div>
         )}

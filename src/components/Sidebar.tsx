@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { toChecklistSetores } from '../hooks/useChecklistDiario'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 
@@ -8,22 +9,13 @@ interface Props {
   onClose: () => void
 }
 
-const navItems = [
+const navItemsBase = [
   {
     to: '/dashboard',
     label: 'Dashboard',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    to: '/checklist-diario',
-    label: 'Checklist Diário',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
   },
@@ -38,9 +30,21 @@ const navItems = [
   },
 ]
 
+const navChecklist = {
+  to: '/checklist-diario',
+  label: 'Checklist Diário',
+  icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  ),
+}
+
 export function Sidebar({ open, onClose }: Props) {
   const { perfil, user, signOut } = useAuth()
   const isAdmin = user?.email === ADMIN_EMAIL
+  const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
+  const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0
 
   return (
     <>
@@ -76,7 +80,7 @@ export function Sidebar({ open, onClose }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => (
+          {[...navItemsBase, ...(podeVerChecklist ? [navChecklist] : [])].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

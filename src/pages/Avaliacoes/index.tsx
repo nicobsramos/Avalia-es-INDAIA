@@ -526,7 +526,9 @@ export function Avaliacoes() {
             {notasVisiveis.map((nu) => {
               const metaUnidade = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
-              const setores = nu.notas_setores.filter((ns) => SETORES_OP.includes(ns.setor_nome))
+              const setores = nu.notas_setores.filter((ns) =>
+                SETORES_OP.includes(ns.setor_nome) && (verTudo || setoresPermitidos.includes(ns.setor_nome))
+              )
               return (
                 <div key={nu.unidade_id} className="px-4 py-3">
                   <div className="mb-2">
