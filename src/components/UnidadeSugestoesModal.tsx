@@ -13,7 +13,7 @@ function avgNulls(arr: (number | null)[]): number | null {
 }
 
 function isSectorVisible(nome: string, setoresDash: string[] | null): boolean {
-  const base = nome === 'Cozinha' ? 'Cozinha' : nome === 'Bar' ? 'Bar' : nome.startsWith('Atendimento') ? 'Atendimento' : null
+  const base = nome === 'Cozinha' ? 'Cozinha' : nome.startsWith('Bar') ? 'Bar' : nome.startsWith('Atendimento') ? 'Atendimento' : null
   if (!base) return false
   return setoresDash === null || setoresDash.includes(base)
 }

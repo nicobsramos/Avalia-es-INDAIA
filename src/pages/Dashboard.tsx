@@ -20,7 +20,7 @@ function avgNulls(arr: (number | null)[]): number | null {
 // Returns the dashboard-level group for a sector nome, or null if not an OP sector
 function sectorBaseGroup(nome: string): 'Cozinha' | 'Bar' | 'Atendimento' | null {
   if (nome === 'Cozinha') return 'Cozinha'
-  if (nome === 'Bar') return 'Bar'
+  if (nome.startsWith('Bar')) return 'Bar'
   if (nome.startsWith('Atendimento')) return 'Atendimento'
   return null
 }
@@ -36,7 +36,7 @@ function toSetoresDashboard(setoresAvaliacao: string[]): string[] {
   const result = new Set<string>()
   for (const s of setoresAvaliacao) {
     if (s === 'Cozinha') result.add('Cozinha')
-    else if (s === 'Bar') result.add('Bar')
+    else if (s.startsWith('Bar')) result.add('Bar')
     else if (s.startsWith('Atendimento')) result.add('Atendimento')
   }
   return Array.from(result)

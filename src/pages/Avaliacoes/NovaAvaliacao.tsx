@@ -30,7 +30,9 @@ export function NovaAvaliacao() {
   const { data: unidades, isLoading: loadingUnidades } = useUnidades()
   const { data: setoresComItensRaw, isLoading: loadingChecklist } = useChecklist()
   const setoresComItens = setoresPermitidos.length > 0
-    ? (setoresComItensRaw ?? []).filter((sc) => setoresPermitidos.includes(sc.setor.nome))
+    ? (setoresComItensRaw ?? []).filter((sc) =>
+        setoresPermitidos.some((p) => p === sc.setor.nome || sc.setor.nome.startsWith(p + ' - '))
+      )
     : (setoresComItensRaw ?? [])
 
   const [unidadeId, setUnidadeId] = useState('')
@@ -209,7 +211,7 @@ export function NovaAvaliacao() {
               <div className="space-y-2">
                 {setoresComItens.map((sc) => {
                   const selecionado = setorSelecionadoId === sc.setor.id
-                  const label = sc.setor.nome.replace(/^Atendimento\s*[-–]\s*/i, '')
+                  const label = sc.setor.nome.replace(/^(Atendimento|Bar)\s*[-–]\s*/i, '')
                   return (
                     <button
                       key={sc.setor.id}
@@ -256,7 +258,7 @@ export function NovaAvaliacao() {
           <p className="text-xs text-gray-400">
             {dataVisita.split('-').reverse().join('/')}
             {setorSelecionadoId && setoresFiltrados[0] && (
-              <> · {setoresFiltrados[0].setor.nome.replace(/^Atendimento\s*[-–]\s*/i, '')}</>
+              <> · {setoresFiltrados[0].setor.nome.replace(/^(Atendimento|Bar)\s*[-–]\s*/i, '')}</>
             )}
           </p>
         </div>

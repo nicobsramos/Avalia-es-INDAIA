@@ -64,6 +64,8 @@ export function metaNutri(nome: string): number {
 const META_SETOR_OP: Record<string, number> = {
   'Cozinha':                         1,
   'Bar':                             1,
+  'Bar - Dia de Evento':             2,
+  'Bar - Pré Preparo':               2,
   'Atendimento - Maitres':           1,
   'Atendimento - Maitres Checklist': 4,
   'Atendimento - Pré evento':        1,

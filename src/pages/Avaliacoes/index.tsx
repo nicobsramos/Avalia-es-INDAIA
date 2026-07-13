@@ -496,7 +496,7 @@ export function Avaliacoes() {
     if (m) sheetVisitas[m[0].toUpperCase()] = row.visitas
   }
 
-  const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
+  const SETORES_OP = ['Cozinha', 'Bar', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
@@ -530,7 +530,7 @@ export function Avaliacoes() {
               const metaUnidade = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
               const setores = nu.notas_setores.filter((ns) =>
-                SETORES_OP.includes(ns.setor_nome) && (verTudo || setoresPermitidos.includes(ns.setor_nome))
+                SETORES_OP.includes(ns.setor_nome) && (verTudo || setoresPermitidos.some((p) => p === ns.setor_nome || ns.setor_nome.startsWith(p + ' - ')))
               )
               return (
                 <div key={nu.unidade_id} className="px-4 py-3">
