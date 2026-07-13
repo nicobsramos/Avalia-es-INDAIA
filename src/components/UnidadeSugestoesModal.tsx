@@ -5,13 +5,17 @@ import { corClasse, formatarNota, formatarMesAno } from '../utils/notas'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 import type { NotaOperacao } from '../utils/sheetsParser'
 
-const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento']
-
 interface ItemCritico { descricao: string; setor: string; valor: 1 | 2 }
 
 function avgNulls(arr: (number | null)[]): number | null {
   const v = arr.filter((n): n is number => n !== null)
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+}
+
+function isSectorVisible(nome: string, setoresDash: string[] | null): boolean {
+  const base = nome === 'Cozinha' ? 'Cozinha' : nome === 'Bar' ? 'Bar' : nome.startsWith('Atendimento') ? 'Atendimento' : null
+  if (!base) return false
+  return setoresDash === null || setoresDash.includes(base)
 }
 
 interface BaseProps {
@@ -84,7 +88,7 @@ async function buscarItensCriticosOp(
   return rs
     .filter((r) => {
       const s = setorMap[r.setor_id]
-      return itemMap[r.item_id] && s && SETORES_OP.includes(s.nome) && (setoresFiltro === null || setoresFiltro.includes(s.nome))
+      return itemMap[r.item_id] && s && isSectorVisible(s.nome, setoresFiltro)
     })
     .map((r) => ({
       descricao: itemMap[r.item_id],
@@ -111,7 +115,7 @@ export function UnidadeSugestoesModal(props: Props) {
   const scores =
     props.tipo === 'operacional'
       ? props.unidade.notas_setores
-          .filter((ns) => SETORES_OP.includes(ns.setor_nome) && (setoresFiltro === null || setoresFiltro.includes(ns.setor_nome)))
+          .filter((ns) => isSectorVisible(ns.setor_nome, setoresFiltro ?? null))
           .map((ns) => ({ nome: ns.setor_rotulo, nota: ns.nota }))
       : props.tipo === 'nutri'
       ? (['Cozinha', 'Bar', 'Atendimento'] as const)
@@ -122,9 +126,7 @@ export function UnidadeSugestoesModal(props: Props) {
   // Operacional sectors for combinado view
   const combinadoSetoresOp: NotaSetor[] =
     props.tipo === 'combinado'
-      ? props.unidade.notas_setores.filter(
-          (ns) => SETORES_OP.includes(ns.setor_nome) && (setoresFiltro === null || setoresFiltro.includes(ns.setor_nome)),
-        )
+      ? props.unidade.notas_setores.filter((ns) => isSectorVisible(ns.setor_nome, setoresFiltro ?? null))
       : []
   const combinadoNotaOp = avgNulls(combinadoSetoresOp.map((ns) => ns.nota))
 

@@ -10,11 +10,24 @@ import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
 import { bgCorClasse, corClasse, formatarNota } from '../utils/notas'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 
-const SETORES_OP = ['Cozinha', 'Bar', 'Atendimento']
-
 function avgNulls(arr: (number | null)[]): number | null {
   const v = arr.filter((n): n is number => n !== null)
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+}
+
+// Returns the dashboard-level group for a sector nome, or null if not an OP sector
+function sectorBaseGroup(nome: string): 'Cozinha' | 'Bar' | 'Atendimento' | null {
+  if (nome === 'Cozinha') return 'Cozinha'
+  if (nome === 'Bar') return 'Bar'
+  if (nome.startsWith('Atendimento')) return 'Atendimento'
+  return null
+}
+
+// Returns true if this sector should be visible given the dashboard sector filter
+function isSectorVisible(nome: string, setoresDash: string[] | null): boolean {
+  const base = sectorBaseGroup(nome)
+  if (!base) return false
+  return setoresDash === null || setoresDash.includes(base)
 }
 
 function toSetoresDashboard(setoresAvaliacao: string[]): string[] {
@@ -138,9 +151,7 @@ export function Dashboard() {
   const unidadesDash = useMemo<UnidadeDashItem[]>(() => {
     return notasUnidades
       .map((nu) => {
-        const setoresVisiveis = nu.notas_setores.filter(
-          (ns) => SETORES_OP.includes(ns.setor_nome) && (setoresDashEff === null || setoresDashEff.includes(ns.setor_nome)),
-        )
+        const setoresVisiveis = nu.notas_setores.filter((ns) => isSectorVisible(ns.setor_nome, setoresDashEff))
         const nutriUnit = (dbNutri ?? []).find((d) => d.unidade_id === nu.unidade_id)
         const checkUnit = (compliance ?? []).find((c) => c.unidade_id === nu.unidade_id)
 
