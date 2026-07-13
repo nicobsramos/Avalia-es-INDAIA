@@ -138,9 +138,9 @@ export function UnidadeSugestoesModal(props: Props) {
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
-      <div className="fixed right-0 top-0 h-dvh w-full max-w-md bg-white z-50 flex flex-col shadow-2xl animate-slide-in">
-        {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-200">
+      <div className="fixed right-0 top-0 h-dvh w-full max-w-md bg-white z-50 overflow-y-auto shadow-2xl animate-slide-in">
+        {/* Header — sticky no topo enquanto o conteúdo rola */}
+        <div className="sticky top-0 bg-white z-10 flex items-start justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <h2 className="font-bold text-gray-900 text-base leading-tight">{nome}</h2>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -166,7 +166,7 @@ export function UnidadeSugestoesModal(props: Props) {
 
         {/* Itens críticos (operacional) */}
         {!loading && props.tipo === 'operacional' && itensCriticos.length > 0 && (
-          <div className="px-5 py-3 border-b border-gray-100 max-h-40 overflow-y-auto">
+          <div className="px-5 py-3 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               {itensCriticos.length} pontos críticos identificados
             </p>
@@ -188,7 +188,7 @@ export function UnidadeSugestoesModal(props: Props) {
         )}
 
         {/* Sugestões */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+        <div className="px-5 py-4 pb-8">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Sugestões de melhoria
           </p>
