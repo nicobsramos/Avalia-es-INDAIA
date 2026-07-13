@@ -410,11 +410,11 @@ function SecaoColapsavel({ titulo, meta, children }: { titulo: string; meta: str
 }
 
 // ── Botões nova avaliação ─────────────────────────────────────────────────────
-function BotoesNovaAvaliacao({ setoresPermitidos, podeNutri }: { setoresPermitidos: string[]; podeNutri: boolean }) {
+function BotoesNovaAvaliacao({ setoresPermitidos, podeNutri, verTudo }: { setoresPermitidos: string[]; podeNutri: boolean; verTudo: boolean }) {
   const navigate = useNavigate()
-  const temOp = setoresPermitidos.length > 0
+  const temOp = verTudo || setoresPermitidos.length > 0
   if (!temOp && !podeNutri) return null
-  const labelOp = setoresPermitidos.length === 1 ? setoresPermitidos[0] : 'Operacional'
+  const labelOp = (!verTudo && setoresPermitidos.length === 1) ? setoresPermitidos[0] : 'Operacional'
   return (
     <div className="flex items-center gap-2">
       {temOp && (
@@ -445,7 +445,7 @@ function BotoesNovaAvaliacao({ setoresPermitidos, podeNutri }: { setoresPermitid
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export function Avaliacoes() {
-  const { perfil } = useAuth()
+  const { perfil, user } = useAuth()
   const { data: opcoes = [] } = useCompetenciasDisponiveis()
   const [competencia, setCompetencia] = useState<Competencia>(competenciaAtual)
   const syncedRef = useRef(false)
@@ -456,9 +456,10 @@ export function Avaliacoes() {
     }
   }, [opcoes])
   const valor = `${competencia.ano}-${String(competencia.mes).padStart(2, '0')}`
-  const verTudo = perfil?.ver_tudo === true
+  // Admin email always gets full access regardless of ver_tudo DB value
+  const verTudo = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
-  const podeNutri: boolean = perfil?.pode_nutri ?? false
+  const podeNutri: boolean = verTudo || (perfil?.pode_nutri ?? false)
   const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
   // null = sem filtro (ver tudo); array = filtrar por esses setores
   const setoresParaFiltro: string[] | null = verTudo ? null : setoresPermitidos
@@ -499,7 +500,7 @@ export function Avaliacoes() {
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-gray-900">Avaliações</h2>
-        <BotoesNovaAvaliacao setoresPermitidos={setoresPermitidos} podeNutri={podeNutri} />
+        <BotoesNovaAvaliacao setoresPermitidos={setoresPermitidos} podeNutri={podeNutri} verTudo={verTudo} />
       </div>
 
       <div className="flex items-center gap-2">

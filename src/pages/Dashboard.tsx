@@ -4,6 +4,8 @@ import { useDashboard } from '../hooks/useDashboard'
 import { useNutriReport } from '../hooks/useNutriAvaliacoes'
 import { useChecklistCompliance, toChecklistSetores } from '../hooks/useChecklistDiario'
 import { useAuth } from '../context/AuthContext'
+
+const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
@@ -132,9 +134,9 @@ function CardUnificado({
 
 export function Dashboard() {
   const { competencia } = useCompetencia()
-  const { perfil } = useAuth()
+  const { perfil, user } = useAuth()
 
-  const verTudo = perfil?.ver_tudo === true
+  const verTudo = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
   const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
   const checklistSetores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const setoresDash: string[] | null = verTudo ? null : toSetoresDashboard(perfil?.setores_avaliacao ?? [])
