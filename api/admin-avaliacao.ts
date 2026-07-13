@@ -28,9 +28,12 @@ export default async function handler(req: any, res: any) {
 
   const caller = await getCaller(req, admin)
   const callerEmail = caller?.email ?? null
-  const { tipo } = req.query as Record<string, string>
+  const { tipo, id } = req.query as Record<string, string>
 
-  // Busca role do usuário no banco para permissões baseadas em perfil
+  if (!id || (tipo !== 'operacional' && tipo !== 'nutri'))
+    return res.status(400).json({ error: 'Parâmetros inválidos' })
+
+  // Fetch caller role
   let callerRole: string | null = null
   if (caller?.id) {
     const { data } = await (admin as any).from('usuarios').select('role').eq('id', caller.id).single()
@@ -40,27 +43,34 @@ export default async function handler(req: any, res: any) {
   const isAdmin      = callerEmail === ADMIN_EMAIL
   const isJuliaNutri = callerEmail === JULIA_EMAIL && tipo === 'nutri'
   const isRedeOp     = callerRole === 'rede' && tipo === 'operacional'
-  if (!isAdmin && !isJuliaNutri && !isRedeOp) return res.status(403).json({ error: 'Acesso negado' })
+  const hasBaseAccess = isAdmin || isJuliaNutri || isRedeOp
 
-  const { id } = req.query as Record<string, string>
-  if (!id || (tipo !== 'operacional' && tipo !== 'nutri'))
-    return res.status(400).json({ error: 'Parâmetros inválidos' })
-
-  const tabela          = tipo === 'operacional' ? 'avaliacoes'       : 'nutri_avaliacoes'
-  const tabelaRespostas = tipo === 'operacional' ? 'avaliacao_respostas' : 'nutri_respostas'
+  const tabela          = tipo === 'operacional' ? 'avaliacoes'           : 'nutri_avaliacoes'
+  const tabelaRespostas = tipo === 'operacional' ? 'avaliacao_respostas'  : 'nutri_respostas'
 
   // ── DELETE ──────────────────────────────────────────────────────────────────
   if (req.method === 'DELETE') {
+    // Fetch the evaluation to check ownership
+    const { data: evalData } = await (admin as any).from(tabela).select('usuario_id').eq('id', id).single()
+
+    // Non-leitura users may delete evaluations they themselves created
+    const isOwner = !!caller && callerRole !== null && callerRole !== 'leitura'
+      && evalData?.usuario_id === caller.id
+
+    if (!hasBaseAccess && !isOwner) return res.status(403).json({ error: 'Acesso negado' })
+
     await (admin as any).from(tabelaRespostas).delete().eq('avaliacao_id', id)
     const { error } = await (admin as any).from(tabela).delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
     return res.json({ ok: true })
   }
 
-  // ── PATCH ───────────────────────────────────────────────────────────────────
+  // ── PATCH (edit) — only admin / rede / julia ────────────────────────────────
   if (req.method === 'PATCH') {
-    const fields   = req.body ?? {}
-    const allowed  = tipo === 'operacional' ? ALLOWED_OP : ALLOWED_NUTRI
+    if (!hasBaseAccess) return res.status(403).json({ error: 'Acesso negado' })
+
+    const fields  = req.body ?? {}
+    const allowed = tipo === 'operacional' ? ALLOWED_OP : ALLOWED_NUTRI
     const update: Record<string, any> = {}
     for (const k of allowed) {
       if (k in fields) update[k] = fields[k] === '' ? null : fields[k]

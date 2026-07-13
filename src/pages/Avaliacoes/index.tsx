@@ -32,6 +32,7 @@ function useNutriCounts(competencia: Competencia) {
 
 type AvaliacaoHistorico = {
   id: string
+  usuario_id: string
   data_visita: string
   unidade_id: string
   unidades: { nome: string }
@@ -54,7 +55,7 @@ function useHistoricoOp(competencia: Competencia, unidadeIds: string[] | null, s
     queryFn: async () => {
       let q = (supabase as any)
         .from('avaliacoes')
-        .select('id, data_visita, unidade_id, unidades(nome), avaliacao_respostas(setor_id, setores(nome, rotulo))')
+        .select('id, usuario_id, data_visita, unidade_id, unidades(nome), avaliacao_respostas(setor_id, setores(nome, rotulo))')
         .eq('competencia_mes', competencia.mes)
         .eq('competencia_ano', competencia.ano)
         .order('data_visita', { ascending: false })
@@ -110,7 +111,7 @@ function HistoricoOp({ competencia, unidadeIds, setoresPermitidos }: { competenc
   const queryClient = useQueryClient()
   const { data: avaliacoes, isLoading } = useHistoricoOp(competencia, unidadeIds, setoresPermitidos)
   const [deletingAv, setDeletingAv] = useState<string | null>(null)
-  const canDelete = user?.email === ADMIN_EMAIL || perfil?.ver_tudo === true
+  const isAdmin = user?.email === ADMIN_EMAIL || perfil?.ver_tudo === true
 
   async function handleDelete(avaliacaoId: string) {
     if (!confirm('Apagar este lançamento? Esta ação não pode ser desfeita.')) return
@@ -138,6 +139,7 @@ function HistoricoOp({ competencia, unidadeIds, setoresPermitidos }: { competenc
       {avaliacoes.map((av) => {
         const dataFmt = av.data_visita.split('-').reverse().join('/')
         const setores = setoresDaAvaliacao(av)
+        const canDeleteThis = isAdmin || av.usuario_id === user?.id
         return (
           <div key={av.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
             <Link to={`/avaliacoes/${av.id}`} className="flex items-center gap-3 min-w-0 flex-1">
@@ -150,7 +152,7 @@ function HistoricoOp({ competencia, unidadeIds, setoresPermitidos }: { competenc
               )}
             </Link>
             <div className="flex items-center gap-2 shrink-0">
-              {canDelete && (
+              {canDeleteThis && (
                 <button
                   disabled={deletingAv === av.id}
                   onClick={() => handleDelete(av.id)}
