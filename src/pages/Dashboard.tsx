@@ -125,6 +125,8 @@ export function Dashboard() {
   const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
   const checklistSetores = verTudo ? null : toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const setoresDash: string[] | null = verTudo ? null : toSetoresDashboard(perfil?.setores_avaliacao ?? [])
+  // If user has sectors but none map to standard names (empty array), treat as no filter so they see all data
+  const setoresDashEff: string[] | null = setoresDash !== null && setoresDash.length === 0 ? null : setoresDash
   const podeVerChecklist = verTudo || !checklistSetores || checklistSetores.length > 0
 
   const { notasUnidades, loading: loadOp, error: errOp } = useDashboard(competencia, unidadeIdsPermitidas)
@@ -135,24 +137,21 @@ export function Dashboard() {
 
   const unidadesDash = useMemo<UnidadeDashItem[]>(() => {
     return notasUnidades
-      .filter((nu) =>
-        nu.notas_setores.some(
-          (ns) =>
-            SETORES_OP.includes(ns.setor_nome) &&
-            (setoresDash === null || setoresDash.includes(ns.setor_nome)) &&
-            ns.nota !== null,
-        ),
-      )
       .map((nu) => {
         const setoresVisiveis = nu.notas_setores.filter(
-          (ns) => SETORES_OP.includes(ns.setor_nome) && (setoresDash === null || setoresDash.includes(ns.setor_nome)),
+          (ns) => SETORES_OP.includes(ns.setor_nome) && (setoresDashEff === null || setoresDashEff.includes(ns.setor_nome)),
         )
         const nutriUnit = (dbNutri ?? []).find((d) => d.unidade_id === nu.unidade_id)
         const checkUnit = (compliance ?? []).find((c) => c.unidade_id === nu.unidade_id)
+
+        // Show unit only if it has any data to display (op, nutri, or checklist)
+        const hasOp = setoresVisiveis.some((ns) => ns.nota !== null)
+        if (!hasOp && nutriUnit === undefined && checkUnit === undefined) return null
+
         return {
           nu,
           cidade: extractCidade(nu.unidade_nome),
-          notaOp: avgNulls(setoresVisiveis.map((ns) => ns.nota)),
+          notaOp: hasOp ? avgNulls(setoresVisiveis.map((ns) => ns.nota)) : null,
           setoresOp: setoresVisiveis,
           notaNutri: nutriUnit?.consolidado ?? null,
           checkAbr: checkUnit?.abertura ?? 0,
@@ -161,7 +160,8 @@ export function Dashboard() {
           temChecklist: checkUnit !== undefined,
         }
       })
-  }, [notasUnidades, dbNutri, compliance, setoresDash])
+      .filter((item): item is UnidadeDashItem => item !== null)
+  }, [notasUnidades, dbNutri, compliance, setoresDashEff])
 
   const unidadesPorCidade = useMemo(() => {
     const map = new Map<string, UnidadeDashItem[]>()
@@ -219,7 +219,7 @@ export function Dashboard() {
           checkEsperado={modal.checkEsperado}
           temChecklist={modal.temChecklist}
           competencia={competencia as Competencia}
-          setoresFiltro={setoresDash}
+          setoresFiltro={setoresDashEff}
           onClose={() => setModal(null)}
         />
       )}
