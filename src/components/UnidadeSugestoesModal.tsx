@@ -12,6 +12,7 @@ interface ItemCritico { descricao: string; setor: string; valor: 1 | 2 }
 interface BaseProps {
   competencia: Competencia
   onClose: () => void
+  setoresFiltro?: string[] | null
 }
 
 interface PropsOp extends BaseProps {
@@ -28,7 +29,8 @@ type Props = PropsOp | PropsNutri
 
 async function buscarItensCriticosOp(
   unidadeId: string,
-  competencia: Competencia
+  competencia: Competencia,
+  setoresFiltro: string[] | null,
 ): Promise<{ itens: ItemCritico[]; erro?: string }> {
   const { data: avs } = await supabase
     .from('avaliacoes')
@@ -66,7 +68,10 @@ async function buscarItensCriticosOp(
   }
 
   const itens: ItemCritico[] = rs
-    .filter((r) => itemMap[r.item_id] && setorMap[r.setor_id] && SETORES_OP.includes(setorMap[r.setor_id].nome))
+    .filter((r) => {
+      const s = setorMap[r.setor_id]
+      return itemMap[r.item_id] && s && SETORES_OP.includes(s.nome) && (setoresFiltro === null || setoresFiltro.includes(s.nome))
+    })
     .map((r) => ({
       descricao: itemMap[r.item_id],
       setor: setorMap[r.setor_id].rotulo,
@@ -77,7 +82,7 @@ async function buscarItensCriticosOp(
 }
 
 export function UnidadeSugestoesModal(props: Props) {
-  const { competencia, onClose } = props
+  const { competencia, onClose, setoresFiltro = null } = props
   const [sugestoes, setSugestoes] = useState<string | null>(null)
   const [itensCriticos, setItensCriticos] = useState<ItemCritico[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,12 +92,11 @@ export function UnidadeSugestoesModal(props: Props) {
   const scores =
     props.tipo === 'operacional'
       ? props.unidade.notas_setores
-          .filter((ns) => SETORES_OP.includes(ns.setor_nome))
+          .filter((ns) => SETORES_OP.includes(ns.setor_nome) && (setoresFiltro === null || setoresFiltro.includes(ns.setor_nome)))
           .map((ns) => ({ nome: ns.setor_rotulo, nota: ns.nota }))
-      : (['Cozinha', 'Bar', 'Atendimento'] as const).map((a) => ({
-          nome: a,
-          nota: props.row[a],
-        }))
+      : (['Cozinha', 'Bar', 'Atendimento'] as const)
+          .filter((a) => setoresFiltro === null || setoresFiltro.includes(a))
+          .map((a) => ({ nome: a, nota: props.row[a] }))
 
   useEffect(() => {
     async function run() {
@@ -100,7 +104,7 @@ export function UnidadeSugestoesModal(props: Props) {
         let itens: ItemCritico[] = []
 
         if (props.tipo === 'operacional') {
-          const res = await buscarItensCriticosOp(props.unidade.unidade_id, competencia)
+          const res = await buscarItensCriticosOp(props.unidade.unidade_id, competencia, setoresFiltro)
           itens = res.itens
           setItensCriticos(itens)
         }
@@ -151,7 +155,7 @@ export function UnidadeSugestoesModal(props: Props) {
         </div>
 
         {/* Scores */}
-        <div className="px-5 py-3 border-b border-gray-100 grid grid-cols-3 gap-2">
+        <div className={`px-5 py-3 border-b border-gray-100 grid gap-2 ${scores.length <= 1 ? 'grid-cols-1' : scores.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {scores.map((s) => (
             <div key={s.nome} className="text-center bg-gray-50 rounded-xl py-2.5 px-1">
               <p className="text-xs text-gray-400 mb-0.5">{s.nome}</p>

@@ -347,6 +347,7 @@ export function Dashboard() {
             tipo="operacional"
             unidade={modal.unidade}
             competencia={competencia as Competencia}
+            setoresFiltro={setoresDash}
             onClose={() => setModal(null)}
           />
         ) : (
@@ -354,6 +355,7 @@ export function Dashboard() {
             tipo="nutri"
             row={modal.row}
             competencia={competencia as Competencia}
+            setoresFiltro={setoresDash}
             onClose={() => setModal(null)}
           />
         )
