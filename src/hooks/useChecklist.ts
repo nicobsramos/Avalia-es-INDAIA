@@ -21,7 +21,7 @@ export function useChecklist() {
         supabase.from('checklist_itens').select('*').eq('ativo', true).order('ordem'),
       ])
 
-      const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
+      const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Bar - Checklist Semanal', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
       return ((setores ?? []) as Setor[])
         .filter((s) => SETORES_OP.includes(s.nome))

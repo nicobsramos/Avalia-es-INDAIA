@@ -67,6 +67,7 @@ const META_SETOR_OP: Record<string, number> = {
   'Bar':                             1,
   'Bar - Dia de Evento':             2,
   'Bar - Pré Preparo':               2,
+  'Bar - Checklist Semanal':         4,
   'Atendimento - Maitres':           1,
   'Atendimento - Maitres Checklist': 4,
   'Atendimento - Pré evento':        1,
