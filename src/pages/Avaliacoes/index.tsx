@@ -35,32 +35,36 @@ type AvaliacaoHistorico = {
   data_visita: string
   unidade_id: string
   unidades: { nome: string }
-  avaliacao_respostas: { setor_id: string; setores: { rotulo: string } | null }[]
+  avaliacao_respostas: { setor_id: string; setores: { nome: string; rotulo: string } | null }[]
 }
 
-function setoresDaAvaliacao(av: AvaliacaoHistorico): string[] {
+function setoresDaAvaliacao(av: AvaliacaoHistorico): { nome: string; rotulo: string }[] {
   const seen = new Set<string>()
-  const result: string[] = []
+  const result: { nome: string; rotulo: string }[] = []
   for (const r of av.avaliacao_respostas) {
-    const rotulo = r.setores?.rotulo
-    if (rotulo && !seen.has(rotulo)) { seen.add(rotulo); result.push(rotulo) }
+    const s = r.setores
+    if (s && !seen.has(s.nome)) { seen.add(s.nome); result.push(s) }
   }
   return result
 }
 
-function useHistoricoOp(competencia: Competencia, unidadeIds: string[] | null) {
+function useHistoricoOp(competencia: Competencia, unidadeIds: string[] | null, setoresPermitidos: string[] | null) {
   return useQuery({
-    queryKey: ['historico-av', competencia.mes, competencia.ano, unidadeIds],
+    queryKey: ['historico-av', competencia.mes, competencia.ano, unidadeIds, setoresPermitidos],
     queryFn: async () => {
       let q = (supabase as any)
         .from('avaliacoes')
-        .select('id, data_visita, unidade_id, unidades(nome), avaliacao_respostas(setor_id, setores(rotulo))')
+        .select('id, data_visita, unidade_id, unidades(nome), avaliacao_respostas(setor_id, setores(nome, rotulo))')
         .eq('competencia_mes', competencia.mes)
         .eq('competencia_ano', competencia.ano)
         .order('data_visita', { ascending: false })
       if (unidadeIds) q = q.in('unidade_id', unidadeIds)
       const { data } = await q
-      return (data ?? []) as AvaliacaoHistorico[]
+      const all = (data ?? []) as AvaliacaoHistorico[]
+      if (!setoresPermitidos) return all
+      return all.filter((av) =>
+        setoresDaAvaliacao(av).some((s) => setoresPermitidos.includes(s.nome))
+      )
     },
     staleTime: 1000 * 60 * 2,
   })
@@ -101,10 +105,10 @@ function Chevron({ aberto }: { aberto: boolean }) {
 }
 
 // ── Histórico operacional — lista com link para detalhe completo ───────────────
-function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
+function HistoricoOp({ competencia, unidadeIds, setoresPermitidos }: { competencia: Competencia; unidadeIds: string[] | null; setoresPermitidos: string[] | null }) {
   const { user, perfil } = useAuth()
   const queryClient = useQueryClient()
-  const { data: avaliacoes, isLoading } = useHistoricoOp(competencia, unidadeIds)
+  const { data: avaliacoes, isLoading } = useHistoricoOp(competencia, unidadeIds, setoresPermitidos)
   const [deletingAv, setDeletingAv] = useState<string | null>(null)
   const canDelete = user?.email === ADMIN_EMAIL || perfil?.ver_tudo === true
 
@@ -141,7 +145,7 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
               <span className="text-sm font-semibold text-gray-800 truncate">{av.unidades?.nome ?? '—'}</span>
               {setores.length > 0 && (
                 <span className="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-full">
-                  {setores.join(' · ')}
+                  {setores.map((s) => s.rotulo).join(' · ')}
                 </span>
               )}
             </Link>
@@ -349,7 +353,7 @@ function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competenci
 }
 
 // ── Histórico combinado com abas ───────────────────────────────────────────────
-function HistoricoAvaliacoes({ competencia, unidadeIds }: { competencia: Competencia; unidadeIds: string[] | null }) {
+function HistoricoAvaliacoes({ competencia, unidadeIds, setoresPermitidos }: { competencia: Competencia; unidadeIds: string[] | null; setoresPermitidos: string[] | null }) {
   const [aba, setAba] = useState<'op' | 'nutri'>('op')
 
   return (
@@ -378,7 +382,7 @@ function HistoricoAvaliacoes({ competencia, unidadeIds }: { competencia: Compete
       </div>
 
       {aba === 'op'
-        ? <HistoricoOp competencia={competencia} unidadeIds={unidadeIds} />
+        ? <HistoricoOp competencia={competencia} unidadeIds={unidadeIds} setoresPermitidos={setoresPermitidos} />
         : <HistoricoNutriDB competencia={competencia} unidadeIds={unidadeIds} />
       }
     </div>
@@ -456,6 +460,8 @@ export function Avaliacoes() {
   const setoresPermitidos: string[] = perfil?.setores_avaliacao ?? []
   const podeNutri: boolean = perfil?.pode_nutri ?? false
   const unidadeIdsPermitidas: string[] | null = verTudo ? null : (perfil?.unidades_ids ?? null)
+  // null = sem filtro (ver tudo); array = filtrar por esses setores
+  const setoresParaFiltro: string[] | null = verTudo ? null : setoresPermitidos
 
   const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia, unidadeIdsPermitidas)
   const { data: nutriCounts = {} } = useNutriCounts(competencia)
@@ -570,7 +576,7 @@ export function Avaliacoes() {
           </SecaoColapsavel>
           )}
 
-          <HistoricoAvaliacoes competencia={competencia} unidadeIds={unidadeIdsPermitidas} />
+          <HistoricoAvaliacoes competencia={competencia} unidadeIds={unidadeIdsPermitidas} setoresPermitidos={setoresParaFiltro} />
         </>
       )}
     </div>
