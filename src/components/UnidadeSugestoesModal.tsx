@@ -138,7 +138,7 @@ export function UnidadeSugestoesModal(props: Props) {
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col shadow-2xl animate-slide-in">
+      <div className="fixed right-0 top-0 h-screen w-full max-w-md bg-white z-50 flex flex-col shadow-2xl animate-slide-in">
         {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-gray-200">
           <div>
@@ -188,7 +188,7 @@ export function UnidadeSugestoesModal(props: Props) {
         )}
 
         {/* Sugestões */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Sugestões de melhoria
           </p>
