@@ -30,19 +30,37 @@ function useNutriCounts(competencia: Competencia) {
   })
 }
 
+type AvaliacaoHistorico = {
+  id: string
+  data_visita: string
+  unidade_id: string
+  unidades: { nome: string }
+  avaliacao_respostas: { setor_id: string; setores: { rotulo: string } | null }[]
+}
+
+function setoresDaAvaliacao(av: AvaliacaoHistorico): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const r of av.avaliacao_respostas) {
+    const rotulo = r.setores?.rotulo
+    if (rotulo && !seen.has(rotulo)) { seen.add(rotulo); result.push(rotulo) }
+  }
+  return result
+}
+
 function useHistoricoOp(competencia: Competencia, unidadeIds: string[] | null) {
   return useQuery({
     queryKey: ['historico-av', competencia.mes, competencia.ano, unidadeIds],
     queryFn: async () => {
       let q = (supabase as any)
         .from('avaliacoes')
-        .select('id, data_visita, unidade_id, unidades(nome)')
+        .select('id, data_visita, unidade_id, unidades(nome), avaliacao_respostas(setor_id, setores(rotulo))')
         .eq('competencia_mes', competencia.mes)
         .eq('competencia_ano', competencia.ano)
         .order('data_visita', { ascending: false })
       if (unidadeIds) q = q.in('unidade_id', unidadeIds)
       const { data } = await q
-      return (data ?? []) as { id: string; data_visita: string; unidade_id: string; unidades: { nome: string } }[]
+      return (data ?? []) as AvaliacaoHistorico[]
     },
     staleTime: 1000 * 60 * 2,
   })
@@ -115,11 +133,17 @@ function HistoricoOp({ competencia, unidadeIds }: { competencia: Competencia; un
     <div className="divide-y divide-gray-100">
       {avaliacoes.map((av) => {
         const dataFmt = av.data_visita.split('-').reverse().join('/')
+        const setores = setoresDaAvaliacao(av)
         return (
           <div key={av.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
             <Link to={`/avaliacoes/${av.id}`} className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-xs text-gray-400 shrink-0 font-medium">{dataFmt}</span>
               <span className="text-sm font-semibold text-gray-800 truncate">{av.unidades?.nome ?? '—'}</span>
+              {setores.length > 0 && (
+                <span className="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-full">
+                  {setores.join(' · ')}
+                </span>
+              )}
             </Link>
             <div className="flex items-center gap-2 shrink-0">
               {canDelete && (
