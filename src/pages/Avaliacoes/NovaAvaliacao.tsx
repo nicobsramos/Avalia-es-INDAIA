@@ -211,7 +211,7 @@ export function NovaAvaliacao() {
               <div className="space-y-2">
                 {setoresComItens.map((sc) => {
                   const selecionado = setorSelecionadoId === sc.setor.id
-                  const label = sc.setor.nome.replace(/^(Atendimento|Bar)\s*[-–]\s*/i, '')
+                  const label = sc.setor.rotulo
                   return (
                     <button
                       key={sc.setor.id}
@@ -258,7 +258,7 @@ export function NovaAvaliacao() {
           <p className="text-xs text-gray-400">
             {dataVisita.split('-').reverse().join('/')}
             {setorSelecionadoId && setoresFiltrados[0] && (
-              <> · {setoresFiltrados[0].setor.nome.replace(/^(Atendimento|Bar)\s*[-–]\s*/i, '')}</>
+              <> · {setoresFiltrados[0].setor.rotulo}</>
             )}
           </p>
         </div>

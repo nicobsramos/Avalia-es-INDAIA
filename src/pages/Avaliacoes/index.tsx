@@ -496,7 +496,7 @@ export function Avaliacoes() {
     if (m) sheetVisitas[m[0].toUpperCase()] = row.visitas
   }
 
-  const SETORES_OP = ['Cozinha', 'Bar', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
+  const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
