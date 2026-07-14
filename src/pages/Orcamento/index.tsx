@@ -44,15 +44,16 @@ function TabelaOrcamento({ aba }: { aba: string }) {
 
   return (
     <div className="overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[75vh]">
-      <table className="text-xs border-collapse">
+      <table className="text-xs border-separate border-spacing-0">
         <thead>
           <tr>
             {header.map((h, i) => (
               <th
                 key={i}
                 className={`
-                  px-3 py-2 text-left font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap
-                  sticky top-0 bg-gray-100
+                  px-3 py-2 text-left font-semibold text-gray-600 bg-gray-100
+                  border-b border-gray-300 whitespace-nowrap
+                  sticky top-0
                   ${i === 0 ? 'left-0 z-30 min-w-[180px] max-w-[220px]' : 'z-20 min-w-[88px]'}
                 `}
               >
@@ -66,12 +67,12 @@ function TabelaOrcamento({ aba }: { aba: string }) {
             const destaque = ehLinhaDestaque(row[0] ?? '')
             const rowBg = destaque ? 'bg-brand-50' : ri % 2 === 1 ? 'bg-gray-50' : 'bg-white'
             return (
-              <tr key={ri} className={`border-b border-gray-100 ${rowBg}`}>
+              <tr key={ri} className={rowBg}>
                 {row.map((cell, ci) => (
                   <td
                     key={ci}
                     className={`
-                      px-3 py-1.5 whitespace-nowrap
+                      px-3 py-1.5 whitespace-nowrap border-b border-gray-100
                       ${destaque ? 'font-semibold text-gray-900' : 'text-gray-700'}
                       ${ci === 0 ? `sticky left-0 z-10 ${rowBg}` : ''}
                       ${ci > 0 && pareceNumero(cell) ? 'text-right tabular-nums' : ''}
