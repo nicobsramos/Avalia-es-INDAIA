@@ -65,9 +65,12 @@ export default async function handler(req: any, res: any) {
     return res.json({ ok: true })
   }
 
-  // ── PATCH (edit) — only admin / rede / julia ────────────────────────────────
+  // ── PATCH (edit) — admin / rede / julia OR owner ────────────────────────────
   if (req.method === 'PATCH') {
-    if (!hasBaseAccess) return res.status(403).json({ error: 'Acesso negado' })
+    const { data: evalData } = await (admin as any).from(tabela).select('usuario_id').eq('id', id).single()
+    const isOwner = !!caller && callerRole !== null && callerRole !== 'leitura'
+      && evalData?.usuario_id === caller.id
+    if (!hasBaseAccess && !isOwner) return res.status(403).json({ error: 'Acesso negado' })
 
     const fields  = req.body ?? {}
     const allowed = tipo === 'operacional' ? ALLOWED_OP : ALLOWED_NUTRI

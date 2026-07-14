@@ -40,7 +40,9 @@ export function DetalheAvaliacao() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const isAdmin = user?.email === ADMIN_EMAIL
-  const canEdit = isAdmin || perfil?.ver_tudo === true
+  const isAdminView = isAdmin || perfil?.ver_tudo === true
+  const isOwner = !!data && data.avaliacao.usuario_id === user?.id && perfil?.role !== 'leitura'
+  const canEdit = isAdminView || isOwner
 
   const [deletando, setDeletando] = useState(false)
   const [editando, setEditando] = useState(false)
@@ -195,10 +197,12 @@ export function DetalheAvaliacao() {
         )
       })}
 
-      {/* Ações admin / rede */}
+      {/* Ações */}
       {canEdit && (
-        <div className="border border-red-200 rounded-xl p-4 bg-red-50 space-y-3">
-          <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Ações administrativas</p>
+        <div className={`border rounded-xl p-4 space-y-3 ${isAdminView ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wide ${isAdminView ? 'text-red-700' : 'text-gray-500'}`}>
+            {isAdminView ? 'Ações administrativas' : 'Gerenciar avaliação'}
+          </p>
           <div className="flex gap-3">
             <button
               onClick={abrirEdicao}
