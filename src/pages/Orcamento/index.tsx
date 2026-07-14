@@ -35,7 +35,12 @@ function TabelaOrcamento({ aba }: { aba: string }) {
     return <EmptyState text="Sem dados para exibir nesta aba." />
   }
 
-  const { header, rows } = data
+  const isGeral = aba === ABA_GERAL
+  const maxDataRows = isGeral ? 49 : 48   // planilha: linha 50 (geral) ou 49 (INDE)
+  const maxCols    = isGeral ? 16 : 19   // coluna P (geral) ou S (INDE)
+
+  const header = data.header.slice(0, maxCols)
+  const rows   = data.rows.slice(0, maxDataRows).map((r) => r.slice(0, maxCols))
 
   return (
     <div className="overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[75vh]">
