@@ -20,6 +20,7 @@ interface ItemState {
   valor: 1 | 2 | 3 | null
   observacao: string
   obsAberta: boolean
+  naAplicavel?: boolean
 }
 
 export function NovaAvaliacao() {
@@ -55,7 +56,15 @@ export function NovaAvaliacao() {
         valor,
         observacao: prev[itemId]?.observacao ?? '',
         obsAberta: valor !== 3 ? true : (prev[itemId]?.obsAberta ?? false),
+        naAplicavel: false,
       },
+    }))
+  }
+
+  function setNaAplicavel(itemId: string) {
+    setItensState((prev) => ({
+      ...prev,
+      [itemId]: { valor: null, observacao: '', obsAberta: false, naAplicavel: true },
     }))
   }
 
@@ -303,15 +312,28 @@ export function NovaAvaliacao() {
                                 type="button"
                                 onClick={() => setValor(item.id, v)}
                                 className={`py-3 rounded-lg text-xs font-bold border-2 transition-all min-h-[44px] ${
-                                  st?.valor === v ? COR_VALOR[v] : COR_INATIVO
+                                  st?.valor === v && !st?.naAplicavel ? COR_VALOR[v] : COR_INATIVO
                                 }`}
                               >
                                 {LABEL_VALOR[v]}
                               </button>
                             ))}
                           </div>
+                          {item.pode_na && (
+                            <button
+                              type="button"
+                              onClick={() => setNaAplicavel(item.id)}
+                              className={`w-full py-2 rounded-lg text-xs font-bold border-2 transition-all ${
+                                st?.naAplicavel
+                                  ? 'bg-gray-400 text-white border-gray-400'
+                                  : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              Evento sem balcão
+                            </button>
+                          )}
 
-                          {st?.valor != null && st.valor !== 3 ? (
+                          {!st?.naAplicavel && st?.valor != null && st.valor !== 3 ? (
                             <div>
                               <p className="text-xs font-medium text-red-500 mb-1.5">
                                 Observação obrigatória *
@@ -326,7 +348,7 @@ export function NovaAvaliacao() {
                                 }`}
                               />
                             </div>
-                          ) : (
+                          ) : !st?.naAplicavel ? (
                             <div>
                               <button
                                 type="button"

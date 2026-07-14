@@ -24,9 +24,9 @@ export interface Database {
         Update: { usuario_id?: string; unidade_id?: string }
       }
       checklist_itens: {
-        Row: { id: string; setor_id: string; secao: string | null; descricao: string; ordem: number; peso: number; ativo: boolean }
-        Insert: { id?: string; setor_id: string; secao?: string | null; descricao: string; ordem: number; peso?: number; ativo?: boolean }
-        Update: { secao?: string | null; descricao?: string; ordem?: number; peso?: number; ativo?: boolean }
+        Row: { id: string; setor_id: string; secao: string | null; descricao: string; ordem: number; peso: number; ativo: boolean; pode_na: boolean }
+        Insert: { id?: string; setor_id: string; secao?: string | null; descricao: string; ordem: number; peso?: number; ativo?: boolean; pode_na?: boolean }
+        Update: { secao?: string | null; descricao?: string; ordem?: number; peso?: number; ativo?: boolean; pode_na?: boolean }
       }
       avaliacoes: {
         Row: {
