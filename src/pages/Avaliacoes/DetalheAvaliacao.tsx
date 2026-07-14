@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDetalheAvaliacao } from '../../hooks/useAvaliacoes'
 import { useAuth } from '../../context/AuthContext'
@@ -35,6 +35,7 @@ async function getToken() {
 
 export function DetalheAvaliacao() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const { data, isLoading, error } = useDetalheAvaliacao(id ?? '')
   const { user, perfil } = useAuth()
   const navigate = useNavigate()
@@ -48,6 +49,19 @@ export function DetalheAvaliacao() {
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [editForm, setEditForm] = useState({ data_visita: '', competencia_mes: 0, competencia_ano: 0 })
+
+  const autoEditDone = useRef(false)
+  useEffect(() => {
+    if (data && canEdit && searchParams.get('edit') === 'true' && !autoEditDone.current) {
+      autoEditDone.current = true
+      setEditForm({
+        data_visita: data.avaliacao.data_visita,
+        competencia_mes: data.avaliacao.competencia_mes,
+        competencia_ano: data.avaliacao.competencia_ano,
+      })
+      setEditando(true)
+    }
+  }, [data, canEdit, searchParams])
 
   if (isLoading) return <LoadingSpinner text="Carregando avaliação..." />
   if (error || !data) {
