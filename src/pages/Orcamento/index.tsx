@@ -43,28 +43,53 @@ function TabelaOrcamento({ aba }: { aba: string }) {
   const filterCols = (row: string[]) =>
     isGeral ? row.slice(0, maxCols) : [row[0], ...row.slice(4, maxCols)]
 
-  const header = filterCols(data.header)
-  const rows   = data.rows.slice(0, maxDataRows).map(filterCols)
+  const header  = filterCols(data.header)
+  // Linha 2 da planilha vai pro thead para ficar congelada junto com a linha 1
+  const allRows = data.rows.slice(0, maxDataRows).map(filterCols)
+  const subhead = allRows[0] ?? []
+  const rows    = allRows.slice(1)
+
+  // Altura fixa da linha 1 do header → usada como top da linha 2
+  const ROW1_H = 33 // px  (py-2 + text-xs + border ≈ 33px)
 
   return (
-    <div className="overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[75vh]">
+    <div className="relative overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[75vh]">
       <table className="text-xs border-separate border-spacing-0">
         <thead>
+          {/* Linha 1 — meses */}
           <tr>
             {header.map((h, i) => (
               <th
                 key={i}
+                style={{ top: 0 }}
                 className={`
-                  px-3 py-2 text-left font-semibold text-gray-600 bg-gray-100
-                  border-b border-gray-300 whitespace-nowrap
-                  sticky top-0
-                  ${i === 0 ? 'left-0 z-30 min-w-[180px] max-w-[220px]' : 'z-20 min-w-[88px]'}
+                  px-3 py-2 text-left font-semibold text-gray-700 bg-gray-100
+                  border-b border-gray-300 whitespace-nowrap sticky
+                  ${i === 0 ? 'left-0 z-[40] min-w-[180px] max-w-[220px]' : 'z-[30] min-w-[88px]'}
                 `}
               >
                 {h}
               </th>
             ))}
           </tr>
+          {/* Linha 2 — sub-cabeçalho (Orç / Real / Var …) */}
+          {subhead.length > 0 && (
+            <tr>
+              {subhead.map((cell, i) => (
+                <th
+                  key={i}
+                  style={{ top: ROW1_H }}
+                  className={`
+                    px-3 py-1.5 text-left font-semibold text-gray-600 bg-gray-50
+                    border-b border-gray-200 whitespace-nowrap sticky
+                    ${i === 0 ? 'left-0 z-[40] min-w-[180px] max-w-[220px]' : 'z-[30] min-w-[88px]'}
+                  `}
+                >
+                  {cell}
+                </th>
+              ))}
+            </tr>
+          )}
         </thead>
         <tbody>
           {rows.map((row, ri) => {
@@ -78,7 +103,7 @@ function TabelaOrcamento({ aba }: { aba: string }) {
                     className={`
                       px-3 py-1.5 whitespace-nowrap border-b border-gray-100
                       ${destaque ? 'font-semibold text-gray-900' : 'text-gray-700'}
-                      ${ci === 0 ? `sticky left-0 z-10 ${rowBg}` : ''}
+                      ${ci === 0 ? `sticky left-0 z-[20] ${rowBg}` : ''}
                       ${ci > 0 && pareceNumero(cell) ? 'text-right tabular-nums' : ''}
                     `}
                   >
