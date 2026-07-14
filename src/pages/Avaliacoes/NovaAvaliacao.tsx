@@ -370,7 +370,7 @@ export function NovaAvaliacao() {
                                 />
                               )}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       )
                     })}
