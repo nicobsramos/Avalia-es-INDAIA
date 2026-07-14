@@ -90,9 +90,9 @@ export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter
   })
 }
 
-export function useChecklistList(unidadeIds?: string[] | null) {
+export function useChecklistList(unidadeIds?: string[] | null, setores?: string[] | null) {
   return useQuery({
-    queryKey: ['checklist-cozinha-list', unidadeIds],
+    queryKey: ['checklist-cozinha-list', unidadeIds, setores],
     queryFn: async (): Promise<(ChecklistCozinha & { unidade: { nome: string } })[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any)
@@ -102,9 +102,8 @@ export function useChecklistList(unidadeIds?: string[] | null) {
         .order('tipo')
         .limit(90)
 
-      if (unidadeIds && unidadeIds.length > 0) {
-        q = q.in('unidade_id', unidadeIds)
-      }
+      if (unidadeIds && unidadeIds.length > 0) q = q.in('unidade_id', unidadeIds)
+      if (setores && setores.length > 0) q = q.in('setor', setores)
 
       const { data, error } = await q
       if (error) throw error

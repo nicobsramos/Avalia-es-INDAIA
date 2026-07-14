@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useChecklistList, useChecklistCompliance, useDeleteChecklist } from '../../hooks/useChecklistDiario'
+import { useChecklistList, useChecklistCompliance, useDeleteChecklist, toChecklistSetores } from '../../hooks/useChecklistDiario'
 import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -90,12 +90,13 @@ function CardUnidadeHoje({
   )
 }
 
-function ViewLider() {
+function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
   const navigate = useNavigate()
   const { user, perfil } = useAuth()
   const unidadeIds = perfil?.unidades_ids
+  const setoresFiltro = checklistSetores.length > 0 ? checklistSetores : null
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds)
-  const { data: lista, isLoading: loadLista, error } = useChecklistList(unidadeIds)
+  const { data: lista, isLoading: loadLista, error } = useChecklistList(unidadeIds, setoresFiltro)
   const deletar = useDeleteChecklist()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
@@ -363,12 +364,9 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
 
 export function ChecklistDiario() {
   const { perfil } = useAuth()
-  const [tab, setTab] = useState<'semana' | 'historico'>('semana')
+  const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
 
   if (perfil?.ver_tudo === true) return <ViewRede setores={null} />
 
-  void tab
-  void setTab
-
-  return <ViewLider />
+  return <ViewLider checklistSetores={checklistSetores} />
 }
