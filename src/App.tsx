@@ -18,6 +18,7 @@ import { AdminSolicitacoes } from './pages/Admin/Solicitacoes'
 import { ChecklistDiario } from './pages/ChecklistDiario'
 import { NovoChecklist } from './pages/ChecklistDiario/NovoChecklist'
 import { DetalheChecklist } from './pages/ChecklistDiario/DetalheChecklist'
+import { Orcamento } from './pages/Orcamento'
 import { LoadingSpinner } from './components/LoadingSpinner'
 
 // Keep in sync with api/admin-solicitacoes.ts ADMIN_EMAIL
@@ -68,6 +69,9 @@ function AppRoutes() {
           <Route path="checklist-diario" element={<ChecklistDiario />} />
           <Route path="checklist-diario/novo" element={<NovoChecklist />} />
           <Route path="checklist-diario/:id" element={<DetalheChecklist />} />
+          {(perfil?.pode_orcamento === true || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) && (
+            <Route path="orcamento" element={<Orcamento />} />
+          )}
           {user?.email === ADMIN_EMAIL && (
             <Route path="admin/solicitacoes" element={<AdminSolicitacoes />} />
           )}

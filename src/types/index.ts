@@ -14,9 +14,9 @@ export interface Database {
         Update: { id?: string; nome?: string; rotulo?: string; ordem?: number }
       }
       usuarios: {
-        Row: { id: string; nome: string; role: 'rede' | 'lider' | 'leitura'; setores_avaliacao: string[]; pode_nutri: boolean; status: 'pendente' | 'ativo' | 'recusado'; unidades_ids: string[] | null; ver_tudo: boolean | null }
-        Insert: { id: string; nome: string; role: 'rede' | 'lider' | 'leitura'; setores_avaliacao?: string[]; pode_nutri?: boolean; status?: 'pendente' | 'ativo' | 'recusado'; unidades_ids?: string[] | null; ver_tudo?: boolean | null }
-        Update: { nome?: string; role?: 'rede' | 'lider' | 'leitura'; setores_avaliacao?: string[]; pode_nutri?: boolean; status?: 'pendente' | 'ativo' | 'recusado'; unidades_ids?: string[] | null; ver_tudo?: boolean | null }
+        Row: { id: string; nome: string; role: 'rede' | 'lider' | 'leitura'; setores_avaliacao: string[]; pode_nutri: boolean; pode_orcamento: boolean; status: 'pendente' | 'ativo' | 'recusado'; unidades_ids: string[] | null; ver_tudo: boolean | null }
+        Insert: { id: string; nome: string; role: 'rede' | 'lider' | 'leitura'; setores_avaliacao?: string[]; pode_nutri?: boolean; pode_orcamento?: boolean; status?: 'pendente' | 'ativo' | 'recusado'; unidades_ids?: string[] | null; ver_tudo?: boolean | null }
+        Update: { nome?: string; role?: 'rede' | 'lider' | 'leitura'; setores_avaliacao?: string[]; pode_nutri?: boolean; pode_orcamento?: boolean; status?: 'pendente' | 'ativo' | 'recusado'; unidades_ids?: string[] | null; ver_tudo?: boolean | null }
       }
       usuario_unidade: {
         Row: { usuario_id: string; unidade_id: string }

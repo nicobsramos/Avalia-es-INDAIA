@@ -40,11 +40,22 @@ const navChecklist = {
   ),
 }
 
+const navOrcamento = {
+  to: '/orcamento',
+  label: 'Orçamento',
+  icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m-6 4h4M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z" />
+    </svg>
+  ),
+}
+
 export function Sidebar({ open, onClose }: Props) {
   const { perfil, user, signOut } = useAuth()
   const isAdmin = user?.email === ADMIN_EMAIL
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0
+  const podeVerOrcamento = perfil?.pode_orcamento === true || perfil?.ver_tudo === true || isAdmin
 
   return (
     <>
@@ -80,7 +91,11 @@ export function Sidebar({ open, onClose }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {[...navItemsBase, ...(podeVerChecklist ? [navChecklist] : [])].map((item) => (
+          {[
+            ...navItemsBase,
+            ...(podeVerChecklist ? [navChecklist] : []),
+            ...(podeVerOrcamento ? [navOrcamento] : []),
+          ].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

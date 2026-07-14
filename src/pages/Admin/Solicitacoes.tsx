@@ -18,6 +18,7 @@ interface UsuarioAtivo {
   unidades_ids: string[] | null
   setores_avaliacao: string[]
   pode_nutri: boolean
+  pode_orcamento: boolean
   ultimo_acesso: string | null
 }
 
@@ -75,6 +76,7 @@ export function AdminSolicitacoes() {
   const [editUnidades, setEditUnidades] = useState<string[]>([])
   const [editSetores, setEditSetores] = useState<string[]>([])
   const [editPodeNutri, setEditPodeNutri] = useState(false)
+  const [editPodeOrcamento, setEditPodeOrcamento] = useState(false)
   const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
@@ -138,6 +140,7 @@ export function AdminSolicitacoes() {
     setEditUnidades(u.unidades_ids ?? [])
     setEditSetores(u.setores_avaliacao ?? [])
     setEditPodeNutri(u.pode_nutri ?? false)
+    setEditPodeOrcamento(u.pode_orcamento ?? false)
   }
 
   function toggleUnidade(id: string) {
@@ -167,12 +170,13 @@ export function AdminSolicitacoes() {
           unidades_ids: editUnidades.length > 0 ? editUnidades : null,
           setores_avaliacao: editSetores,
           pode_nutri: editPodeNutri,
+          pode_orcamento: editPodeOrcamento,
         }),
       })
       if (!res.ok) { alert('Erro ao salvar.'); return }
       setUsuarios((prev) => prev.map((u) =>
         u.id === editandoUser.id
-          ? { ...u, nome: editNome.trim() || u.nome, role: editRole, unidades_ids: editUnidades.length > 0 ? editUnidades : null, setores_avaliacao: editSetores, pode_nutri: editPodeNutri }
+          ? { ...u, nome: editNome.trim() || u.nome, role: editRole, unidades_ids: editUnidades.length > 0 ? editUnidades : null, setores_avaliacao: editSetores, pode_nutri: editPodeNutri, pode_orcamento: editPodeOrcamento }
           : u
       ))
       setEditandoUser(null)
@@ -316,6 +320,9 @@ export function AdminSolicitacoes() {
                     {u.pode_nutri && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Nutri</span>
                     )}
+                    {u.pode_orcamento && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Orçamento</span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 truncate mt-0.5">{u.email}</p>
                   {u.setores_avaliacao.length > 0 && (
@@ -415,6 +422,22 @@ export function AdminSolicitacoes() {
                   className="accent-emerald-600 w-4 h-4 shrink-0"
                 />
                 <span className="text-sm text-gray-800">Pode lançar avaliações de Seg. Alimentar</span>
+              </label>
+            </div>
+
+            {/* Orçamento */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Orçamento</label>
+              <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                editPodeOrcamento ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={editPodeOrcamento}
+                  onChange={(e) => setEditPodeOrcamento(e.target.checked)}
+                  className="accent-amber-600 w-4 h-4 shrink-0"
+                />
+                <span className="text-sm text-gray-800">Pode ver a tela de Orçamento</span>
               </label>
             </div>
 
