@@ -38,16 +38,18 @@ function TabelaOrcamento({ aba }: { aba: string }) {
   const { header, rows } = data
 
   return (
-    <div className="overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[70vh]">
-      <table className="min-w-full text-xs border-collapse">
+    <div className="overflow-auto border border-gray-200 rounded-xl bg-white shadow-sm max-h-[75vh]">
+      <table className="text-xs border-collapse">
         <thead>
           <tr>
             {header.map((h, i) => (
               <th
                 key={i}
-                className={`px-3 py-2 text-left font-semibold text-gray-600 bg-gray-50 border-b border-gray-200 whitespace-nowrap ${
-                  i === 0 ? 'sticky left-0 z-20 bg-gray-50' : ''
-                }`}
+                className={`
+                  px-3 py-2 text-left font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap
+                  sticky top-0 bg-gray-100
+                  ${i === 0 ? 'left-0 z-30 min-w-[180px] max-w-[220px]' : 'z-20 min-w-[88px]'}
+                `}
               >
                 {h}
               </th>
@@ -57,17 +59,18 @@ function TabelaOrcamento({ aba }: { aba: string }) {
         <tbody>
           {rows.map((row, ri) => {
             const destaque = ehLinhaDestaque(row[0] ?? '')
+            const rowBg = destaque ? 'bg-brand-50' : ri % 2 === 1 ? 'bg-gray-50' : 'bg-white'
             return (
-              <tr
-                key={ri}
-                className={`border-b border-gray-100 ${destaque ? 'bg-brand-50/60' : ri % 2 === 1 ? 'bg-gray-50/50' : ''}`}
-              >
+              <tr key={ri} className={`border-b border-gray-100 ${rowBg}`}>
                 {row.map((cell, ci) => (
                   <td
                     key={ci}
-                    className={`px-3 py-1.5 whitespace-nowrap ${destaque ? 'font-semibold text-gray-900' : 'text-gray-700'} ${
-                      ci === 0 ? 'sticky left-0 z-10 bg-inherit' : ''
-                    } ${ci > 0 && pareceNumero(cell) ? 'text-right tabular-nums' : ''}`}
+                    className={`
+                      px-3 py-1.5 whitespace-nowrap
+                      ${destaque ? 'font-semibold text-gray-900' : 'text-gray-700'}
+                      ${ci === 0 ? `sticky left-0 z-10 ${rowBg}` : ''}
+                      ${ci > 0 && pareceNumero(cell) ? 'text-right tabular-nums' : ''}
+                    `}
                   >
                     {cell}
                   </td>
