@@ -398,10 +398,10 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
 }
 
 export function ChecklistDiario() {
-  const { perfil } = useAuth()
+  const { perfil, user } = useAuth()
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
 
-  if (perfil?.ver_tudo === true) return <ViewRede setores={null} />
+  if (perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) return <ViewRede setores={null} />
 
   return <ViewLider checklistSetores={checklistSetores} />
 }

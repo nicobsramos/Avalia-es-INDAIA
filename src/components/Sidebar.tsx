@@ -54,7 +54,7 @@ export function Sidebar({ open, onClose }: Props) {
   const { perfil, user, signOut } = useAuth()
   const isAdmin = user?.email === ADMIN_EMAIL
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
-  const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0
+  const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0 || isAdmin
   const podeVerOrcamento = perfil?.pode_orcamento === true || perfil?.ver_tudo === true || isAdmin
 
   return (
