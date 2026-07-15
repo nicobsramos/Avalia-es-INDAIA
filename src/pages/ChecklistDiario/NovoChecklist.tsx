@@ -136,7 +136,12 @@ export function NovoChecklist() {
 
       navigate(`/checklist-diario/${id}`)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+      console.error('Erro ao salvar checklist:', err)
+      const msg = err instanceof Error
+        ? err.message
+        : (typeof err === 'object' && err !== null && 'message' in err)
+          ? String((err as { message: unknown }).message)
+          : JSON.stringify(err)
       setErro('Erro ao salvar: ' + msg)
       setSalvando(false)
     }
