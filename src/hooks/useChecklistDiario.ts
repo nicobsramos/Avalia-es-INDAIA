@@ -294,7 +294,15 @@ export function useDeleteChecklist() {
         throw new Error((body as { error?: string }).error ?? 'Erro ao apagar')
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      // Remove o item do cache imediatamente para a UI refletir antes do refetch
+      queryClient.setQueriesData(
+        { queryKey: ['checklist-cozinha-list'] },
+        (old: unknown) => {
+          if (!Array.isArray(old)) return old
+          return old.filter((c: { id: string }) => c.id !== id)
+        },
+      )
       queryClient.invalidateQueries({ queryKey: ['checklist-cozinha-list'] })
       queryClient.invalidateQueries({ queryKey: ['checklist-compliance'] })
       queryClient.invalidateQueries({ queryKey: ['checklist-existente'] })
