@@ -7,7 +7,6 @@ import {
   useChecklistExistente,
   useSalvarChecklist,
   toChecklistSetores,
-  type ChecklistCozinhaItem,
 } from '../../hooks/useChecklistDiario'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -17,6 +16,7 @@ interface ItemState {
   feito: boolean
   observacao: string
   obsAberta: boolean
+  naAplicavel?: boolean
 }
 
 function detectarTipoPadrao(): 'abertura' | 'fechamento' {
@@ -37,7 +37,6 @@ export function NovoChecklist() {
   const [dataOperacao, setDataOperacao] = useState(() => new Date().toISOString().slice(0, 10))
   const [responsavel, setResponsavel] = useState(perfil?.nome ?? '')
   const [itensState, setItensState] = useState<Record<string, ItemState>>({})
-  const [naSecoes, setNaSecoes] = useState<Set<string>>(new Set())
   const [obsGerais, setObsGerais] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -63,10 +62,9 @@ export function NovoChecklist() {
     if (unidades?.length === 1 && !unidadeId) setUnidadeId(unidades[0].id)
   }, [unidades, unidadeId])
 
-  // Quando muda tipo ou data, reseta itens e seções N/A
+  // Quando muda tipo ou data, reseta itens
   useEffect(() => {
     setItensState({})
-    setNaSecoes(new Set())
   }, [tipo, dataOperacao])
 
   // Se existente foi carregado e tem dados, pre-carregar respostas
@@ -98,25 +96,15 @@ export function NovoChecklist() {
     }))
   }
 
-  function toggleSecaoNA(titulo: string, itensSecao: ChecklistCozinhaItem[]) {
-    setNaSecoes((prev) => {
-      const next = new Set(prev)
-      if (next.has(titulo)) {
-        next.delete(titulo)
-        setItensState((s) => {
-          const copy = { ...s }
-          itensSecao.forEach((item) => { copy[item.id] = { feito: false, observacao: '', obsAberta: false } })
-          return copy
-        })
-      } else {
-        next.add(titulo)
-        setItensState((s) => {
-          const copy = { ...s }
-          itensSecao.forEach((item) => { copy[item.id] = { feito: true, observacao: 'Dia sem evento — não se aplica', obsAberta: false } })
-          return copy
-        })
+  function toggleItemNA(itemId: string) {
+    setItensState((prev) => {
+      const isNA = prev[itemId]?.naAplicavel ?? false
+      return {
+        ...prev,
+        [itemId]: isNA
+          ? { feito: false, observacao: '', obsAberta: false, naAplicavel: false }
+          : { feito: true, observacao: 'Dia sem evento — não se aplica', obsAberta: false, naAplicavel: true },
       }
-      return next
     })
   }
 
@@ -324,34 +312,21 @@ export function NovoChecklist() {
           </div>
         ) : (
           secoes.map((secao) => {
-            const isNA = naSecoes.has(secao.titulo)
             const mostrarBotaoNA = secao.titulo === 'Verificações' && checklistSetores.includes('Atendimento')
             return (
             <div key={secao.titulo} className="space-y-2">
-              <div className="flex items-center gap-2 py-1 flex-wrap">
+              <div className="flex items-center gap-2 py-1">
                 <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                   {secao.titulo}
                 </h3>
-                {mostrarBotaoNA && (
-                  <button
-                    type="button"
-                    onClick={() => toggleSecaoNA(secao.titulo, (secao.itens ?? []) as ChecklistCozinhaItem[])}
-                    className={`text-xs font-semibold px-3 py-1 rounded-full border-2 transition-all ${
-                      isNA
-                        ? 'bg-gray-500 text-white border-gray-500'
-                        : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Dia sem evento — N/A
-                  </button>
-                )}
               </div>
 
               <div className="space-y-2">
                 {(secao.itens ?? []).map((item) => {
                   const st = itensState[item.id]
                   const feito = st?.feito ?? false
+                  const isNA = st?.naAplicavel ?? false
 
                   return (
                     <div
@@ -403,6 +378,20 @@ export function NovoChecklist() {
                           />
                         )}
                       </div>
+
+                      {mostrarBotaoNA && (
+                        <button
+                          type="button"
+                          onClick={() => toggleItemNA(item.id)}
+                          className={`w-full mt-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                            isNA
+                              ? 'bg-gray-400 text-white border-gray-400'
+                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          Dia sem evento — N/A
+                        </button>
+                      )}
                     </div>
                   )
                 })}
