@@ -80,9 +80,9 @@ export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter
         .order('ordem')
       if (error) throw error
       const all = (data ?? []) as ChecklistCozinhaItem[]
-      // Filter by sector when specified; items with setor=null are visible to all
       if (setoresFilter && setoresFilter.length > 0) {
-        return all.filter((item) => !item.setor || setoresFilter.includes(item.setor))
+        // Strict: only show items explicitly tagged for the user's sectors
+        return all.filter((item) => !!item.setor && setoresFilter.includes(item.setor))
       }
       return all
     },
