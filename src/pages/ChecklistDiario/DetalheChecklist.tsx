@@ -60,7 +60,7 @@ export function DetalheChecklist() {
   }, [])
 
   const podeEditar = checklist.usuario_id === user?.id
-  const podeApagar = perfil?.ver_tudo === true || user?.email === 'n.ramos.indaia@gmail.com'
+  const podeApagar = perfil?.ver_tudo === true || user?.email === 'n.ramos.indaia@gmail.com' || (perfil?.role !== 'leitura' && checklist.usuario_id === user?.id)
 
   async function handleDelete() {
     await deletar.mutateAsync(id!)

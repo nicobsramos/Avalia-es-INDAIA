@@ -20,15 +20,25 @@ export default async function handler(req: any, res: any) {
 
   const { data: perfil } = await (admin as any)
     .from('usuarios')
-    .select('ver_tudo')
+    .select('ver_tudo, role')
     .eq('id', user.id)
     .single()
 
-  const isAdmin = user.email === ADMIN_EMAIL || perfil?.ver_tudo === true
-  if (!isAdmin) return res.status(403).json({ error: 'Acesso negado' })
-
   const { id } = req.query as Record<string, string>
   if (!id) return res.status(400).json({ error: 'ID obrigatório' })
+
+  const isAdmin = user.email === ADMIN_EMAIL || perfil?.ver_tudo === true
+
+  // Não-admin: só pode apagar checklist que ele mesmo criou (e não é role leitura)
+  if (!isAdmin) {
+    const { data: ck } = await (admin as any)
+      .from('checklist_cozinha')
+      .select('usuario_id')
+      .eq('id', id)
+      .single()
+    const isOwner = !!ck && ck.usuario_id === user.id && perfil?.role !== 'leitura'
+    if (!isOwner) return res.status(403).json({ error: 'Acesso negado' })
+  }
 
   await (admin as any).from('checklist_cozinha_respostas').delete().eq('checklist_id', id)
   const { error } = await (admin as any).from('checklist_cozinha').delete().eq('id', id)

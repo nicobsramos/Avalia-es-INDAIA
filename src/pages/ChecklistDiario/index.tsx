@@ -42,12 +42,17 @@ function CardUnidadeHoje({
   unidadeId,
   unidadeNome,
   checklistsHoje,
+  podeApagar,
+  onDelete,
 }: {
   unidadeId: string
   unidadeNome: string
   checklistsHoje: { id: string; tipo: string }[]
+  podeApagar: boolean
+  onDelete: (id: string) => void
 }) {
   const navigate = useNavigate()
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
   const tiposFeitos = new Set(checklistsHoje.map((c) => c.tipo))
   const aberturaDone = tiposFeitos.has('abertura')
   const fechamentoDone = tiposFeitos.has('fechamento')
@@ -68,12 +73,39 @@ function CardUnidadeHoje({
                 {TIPO_LABEL[tipo]}
               </p>
               {feito ? (
-                <Link
-                  to={`/checklist-diario/${existente!.id}`}
-                  className="text-xs text-green-600 underline"
-                >
-                  Ver preenchido
-                </Link>
+                <>
+                  <Link
+                    to={`/checklist-diario/${existente!.id}`}
+                    className="text-xs text-green-600 underline block"
+                  >
+                    Ver preenchido
+                  </Link>
+                  {podeApagar && (
+                    confirmandoId === existente!.id ? (
+                      <div className="flex items-center justify-center gap-1 mt-1.5">
+                        <button
+                          onClick={() => { onDelete(existente!.id); setConfirmandoId(null) }}
+                          className="text-xs bg-red-500 text-white font-semibold px-2 py-0.5 rounded"
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmandoId(existente!.id)}
+                        className="mt-1.5 text-xs text-red-400 hover:text-red-600 font-medium"
+                      >
+                        Apagar
+                      </button>
+                    )
+                  )}
+                </>
               ) : (
                 <button
                   onClick={() => navigate(`/checklist-diario/novo?tipo=${tipo}&unidade_id=${unidadeId}`)}
@@ -107,7 +139,8 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
     </div>
   )
 
-  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
+  // Admins podem apagar qualquer um; líderes não-leitura podem apagar os próprios
+  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || perfil?.role !== 'leitura'
   const hoje = (lista ?? []).filter((c) => c.data_operacao === TODAY)
   const historico = (lista ?? []).filter((c) => c.data_operacao !== TODAY)
 
@@ -146,6 +179,8 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
                 unidadeId={u.id}
                 unidadeNome={u.nome}
                 checklistsHoje={hoje.filter((c) => c.unidade_id === u.id)}
+                podeApagar={podeApagar}
+                onDelete={handleDelete}
               />
             ))}
           </div>
