@@ -50,6 +50,7 @@ export function NovoChecklist() {
     unidadeId || undefined,
     tipo,
     dataOperacao,
+    checklistSetores[0] ?? null,
   )
   const salvar = useSalvarChecklist()
 

@@ -155,17 +155,21 @@ export function useChecklistExistente(
   unidadeId: string | undefined,
   tipo: 'abertura' | 'fechamento',
   data: string,
+  setor?: string | null,
 ) {
   return useQuery({
-    queryKey: ['checklist-existente', unidadeId, tipo, data],
+    queryKey: ['checklist-existente', unidadeId, tipo, data, setor],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: result, error } = await (supabase as any)
+      let q = (supabase as any)
         .from('checklist_cozinha')
         .select('id, usuario_id')
         .eq('unidade_id', unidadeId!)
         .eq('tipo', tipo)
         .eq('data_operacao', data)
+      // Filtra pelo setor do usuário para Bar não conflitar com Cozinha na mesma unidade
+      if (setor) q = q.eq('setor', setor)
+      const { data: result, error } = await q
         .maybeSingle()
       if (error) throw error
       return result as { id: string; usuario_id: string } | null
