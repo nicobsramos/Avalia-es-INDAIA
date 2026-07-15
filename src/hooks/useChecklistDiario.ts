@@ -94,6 +94,9 @@ export function useChecklistList(unidadeIds?: string[] | null, setores?: string[
   return useQuery({
     queryKey: ['checklist-cozinha-list', unidadeIds, setores],
     queryFn: async (): Promise<(ChecklistCozinha & { unidade: { nome: string } })[]> => {
+      // Array vazio explícito = usuário sem setor configurado → retorna nada (sem vazamento entre setores)
+      if (Array.isArray(setores) && setores.length === 0) return []
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any)
         .from('checklist_cozinha')

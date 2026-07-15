@@ -126,7 +126,8 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
   const navigate = useNavigate()
   const { user, perfil } = useAuth()
   const unidadeIds = perfil?.unidades_ids
-  const setoresFiltro = checklistSetores.length > 0 ? checklistSetores : null
+  // Array vazio = sem setor configurado → hook retorna [] sem vazar checklists de outros setores
+  const setoresFiltro = checklistSetores.length > 0 ? checklistSetores : []
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds)
   const { data: lista, isLoading: loadLista, error } = useChecklistList(unidadeIds, setoresFiltro)
   const deletar = useDeleteChecklist()
