@@ -110,7 +110,14 @@ export function useChecklistList(unidadeIds?: string[] | null, setores?: string[
 
       const { data, error } = await q
       if (error) throw error
-      return data ?? []
+
+      const rows = (data ?? []) as (ChecklistCozinha & { unidade: { nome: string }; setor: string | null })[]
+
+      // Filtro client-side como garantia: nunca vazar checklists de outros setores
+      if (setores && setores.length > 0) {
+        return rows.filter((c) => c.setor !== null && setores.includes(c.setor))
+      }
+      return rows
     },
     enabled: !unidadeIds || unidadeIds.length > 0,
   })
