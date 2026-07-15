@@ -13,7 +13,7 @@ async function getCaller(req: any, admin: any): Promise<{ email: string; id: str
   return { email: user.email ?? '', id: user.id }
 }
 
-const ALLOWED_OP   = ['data_visita', 'competencia_mes', 'competencia_ano']
+const ALLOWED_OP   = ['data_visita', 'competencia_mes', 'competencia_ano', 'respostas']
 const ALLOWED_NUTRI = [
   'data_visita', 'competencia_mes', 'competencia_ano',
   'lideres_presentes', 'obs_cozinha', 'obs_bar', 'obs_atendimento', 'relatorio_tecnico',
@@ -81,8 +81,24 @@ export default async function handler(req: any, res: any) {
     if (Object.keys(update).length === 0)
       return res.status(400).json({ error: 'Nenhum campo válido' })
 
-    const { error } = await (admin as any).from(tabela).update(update).eq('id', id)
-    if (error) return res.status(500).json({ error: error.message })
+    const respostas = update.respostas
+    delete update.respostas
+    if (Object.keys(update).length > 0) {
+      const { error } = await (admin as any).from(tabela).update(update).eq('id', id)
+      if (error) return res.status(500).json({ error: error.message })
+    }
+
+    if (tipo === 'operacional' && Array.isArray(respostas)) {
+      for (const r of respostas as { item_id: string; valor: number; observacao: string }[]) {
+        if (!r.item_id || !r.valor) continue
+        await (admin as any)
+          .from(tabelaRespostas)
+          .update({ valor: r.valor, observacao: r.observacao || null })
+          .eq('avaliacao_id', id)
+          .eq('item_id', r.item_id)
+      }
+    }
+
     return res.json({ ok: true })
   }
 

@@ -17,6 +17,18 @@ const COR_BADGE: Record<number, string> = {
   2: 'bg-orange-100 text-orange-700 border border-orange-200',
   3: 'bg-green-100 text-green-700 border border-green-200',
 }
+const COR_BTN_ATIVO: Record<number, string> = {
+  1: 'bg-red-500 text-white border-red-500',
+  2: 'bg-orange-400 text-white border-orange-400',
+  3: 'bg-green-500 text-white border-green-500',
+}
+const COR_BTN_INATIVO = 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+
+interface EditResposta {
+  valor: 1 | 2 | 3 | null
+  observacao: string
+  obsAberta: boolean
+}
 
 function agruparPorSecao(itens: ItemDetalhe[]): { secao: string; itens: ItemDetalhe[] }[] {
   const map = new Map<string, ItemDetalhe[]>()
@@ -49,18 +61,15 @@ export function DetalheAvaliacao() {
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [editForm, setEditForm] = useState({ data_visita: '', competencia_mes: 0, competencia_ano: 0 })
+  const [editRespostas, setEditRespostas] = useState<Record<string, EditResposta>>({})
 
   const autoEditDone = useRef(false)
   useEffect(() => {
     if (data && canEdit && searchParams.get('edit') === 'true' && !autoEditDone.current) {
       autoEditDone.current = true
-      setEditForm({
-        data_visita: data.avaliacao.data_visita,
-        competencia_mes: data.avaliacao.competencia_mes,
-        competencia_ano: data.avaliacao.competencia_ano,
-      })
-      setEditando(true)
+      abrirEdicao()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, canEdit, searchParams])
 
   if (isLoading) return <LoadingSpinner text="Carregando avaliação..." />
@@ -82,7 +91,43 @@ export function DetalheAvaliacao() {
       competencia_mes: avaliacao.competencia_mes,
       competencia_ano: avaliacao.competencia_ano,
     })
+    const respostas: Record<string, EditResposta> = {}
+    for (const { itens } of notasPorSetor) {
+      for (const item of itens) {
+        respostas[item.item_id] = {
+          valor: item.valor as 1 | 2 | 3,
+          observacao: item.observacao ?? '',
+          obsAberta: !!item.observacao,
+        }
+      }
+    }
+    setEditRespostas(respostas)
     setEditando(true)
+  }
+
+  function setValor(itemId: string, valor: 1 | 2 | 3) {
+    setEditRespostas((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        valor,
+        obsAberta: valor !== 3 ? true : (prev[itemId]?.obsAberta ?? false),
+      },
+    }))
+  }
+
+  function toggleObs(itemId: string) {
+    setEditRespostas((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], obsAberta: !prev[itemId]?.obsAberta },
+    }))
+  }
+
+  function setObservacao(itemId: string, observacao: string) {
+    setEditRespostas((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], observacao },
+    }))
   }
 
   async function handleDelete() {
@@ -107,13 +152,21 @@ export function DetalheAvaliacao() {
     setSalvando(true)
     try {
       const token = await getToken()
+      const respostasPayload = Object.entries(editRespostas)
+        .filter(([, r]) => r.valor !== null)
+        .map(([item_id, r]) => ({
+          item_id,
+          valor: r.valor,
+          observacao: r.observacao,
+        }))
+
       const res = await fetch(`/api/admin-avaliacao?id=${avaliacao.id}&tipo=operacional`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, respostas: respostasPayload }),
       })
       if (!res.ok) { alert('Erro ao salvar.'); return }
-      qc.invalidateQueries({ queryKey: ['detalhe-avaliacao', avaliacao.id] })
+      qc.invalidateQueries({ queryKey: ['avaliacao', avaliacao.id] })
       qc.invalidateQueries({ queryKey: ['avaliacoes'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       setEditando(false)
@@ -123,6 +176,156 @@ export function DetalheAvaliacao() {
     }
   }
 
+  // ── MODO EDIÇÃO ──────────────────────────────────────────────────────────────
+  if (editando) {
+    return (
+      <div className="pb-28">
+        {/* Header fixo */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setEditando(false)}
+            className="text-gray-400 hover:text-gray-600 p-1"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">{avaliacao.unidade_nome}</p>
+            <p className="text-xs text-gray-400">Editando avaliação</p>
+          </div>
+        </div>
+
+        <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
+          {/* Metadados */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Dados gerais</p>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Data da visita</label>
+              <input
+                type="date"
+                value={editForm.data_visita}
+                onChange={(e) => setEditForm((f) => ({ ...f, data_visita: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Mês competência</label>
+                <input
+                  type="number" min={1} max={12}
+                  value={editForm.competencia_mes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, competencia_mes: Number(e.target.value) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Ano competência</label>
+                <input
+                  type="number"
+                  value={editForm.competencia_ano}
+                  onChange={(e) => setEditForm((f) => ({ ...f, competencia_ano: Number(e.target.value) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Itens por setor */}
+          {notasPorSetor.map(({ setor, itens }) => {
+            const secoes = agruparPorSecao(itens)
+            return (
+              <div key={setor.id} className="space-y-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                  {setor.rotulo}
+                </p>
+                {secoes.map(({ secao, itens: secItens }) => (
+                  <div key={secao} className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide ml-4">{secao}</p>
+                    {secItens.map((item) => {
+                      const st = editRespostas[item.item_id]
+                      return (
+                        <div
+                          key={item.item_id}
+                          className={`bg-white border rounded-xl p-4 space-y-3 transition-colors ${
+                            st?.valor === 1 ? 'border-red-200' :
+                            st?.valor === 2 ? 'border-orange-200' :
+                            st?.valor === 3 ? 'border-green-200' : 'border-gray-200'
+                          }`}
+                        >
+                          <p className="text-sm text-gray-800 leading-snug">{item.descricao}</p>
+                          <div className="flex gap-2">
+                            {([1, 2, 3] as const).map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setValor(item.item_id, v)}
+                                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition-all ${
+                                  st?.valor === v ? COR_BTN_ATIVO[v] : COR_BTN_INATIVO
+                                }`}
+                              >
+                                {LABEL_VALOR[v]}
+                              </button>
+                            ))}
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => toggleObs(item.item_id)}
+                              className="text-xs text-brand-600 hover:underline flex items-center gap-1"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              {st?.obsAberta ? 'Fechar obs.' : st?.observacao ? 'Ver/editar obs.' : 'Observação'}
+                            </button>
+                            {st?.obsAberta && (
+                              <textarea
+                                value={st.observacao}
+                                onChange={(e) => setObservacao(item.item_id, e.target.value)}
+                                placeholder="Observação ou não conformidade..."
+                                rows={2}
+                                className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Botões fixos no rodapé */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-10">
+          <div className="max-w-lg mx-auto flex gap-3">
+            <button
+              type="button"
+              onClick={() => setEditando(false)}
+              className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={handleSave}
+              className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white text-sm font-bold py-3 rounded-xl transition-colors"
+            >
+              {salvando ? 'Salvando…' : 'Salvar alterações'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MODO LEITURA ─────────────────────────────────────────────────────────────
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
       {/* Cabeçalho */}
@@ -231,63 +434,6 @@ export function DetalheAvaliacao() {
             >
               {deletando ? 'Excluindo…' : 'Excluir'}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de edição */}
-      {editando && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-base font-bold text-gray-900">Editar avaliação</h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Data da visita</label>
-                <input
-                  type="date"
-                  value={editForm.data_visita}
-                  onChange={(e) => setEditForm((f) => ({ ...f, data_visita: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Mês competência</label>
-                  <input
-                    type="number" min={1} max={12}
-                    value={editForm.competencia_mes}
-                    onChange={(e) => setEditForm((f) => ({ ...f, competencia_mes: Number(e.target.value) }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Ano competência</label>
-                  <input
-                    type="number"
-                    value={editForm.competencia_ano}
-                    onChange={(e) => setEditForm((f) => ({ ...f, competencia_ano: Number(e.target.value) }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <button
-                onClick={() => setEditando(false)}
-                className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={salvando}
-                onClick={handleSave}
-                className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
-              >
-                {salvando ? 'Salvando…' : 'Salvar'}
-              </button>
-            </div>
           </div>
         </div>
       )}
