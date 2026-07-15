@@ -41,7 +41,9 @@ export function NovoChecklist() {
   const [erro, setErro] = useState('')
 
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
-  const { data: unidades, isLoading: loadUnidades } = useUnidades()
+  const verTudo = perfil?.ver_tudo === true
+  const unidadeIds = verTudo ? null : (perfil?.unidades_ids ?? null)
+  const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds ?? undefined)
   const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, checklistSetores.length > 0 ? checklistSetores : undefined)
   const { data: existente, isLoading: loadExistente } = useChecklistExistente(
     unidadeId || undefined,
@@ -53,6 +55,11 @@ export function NovoChecklist() {
   useEffect(() => {
     if (perfil?.nome) setResponsavel(perfil.nome)
   }, [perfil?.nome])
+
+  // Auto-seleciona quando o usuário tem exatamente 1 unidade
+  useEffect(() => {
+    if (unidades?.length === 1 && !unidadeId) setUnidadeId(unidades[0].id)
+  }, [unidades, unidadeId])
 
   // Quando muda tipo ou data, reseta itens
   useEffect(() => {
@@ -175,20 +182,22 @@ export function NovoChecklist() {
             </div>
           </div>
 
-          {/* Unidade */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-            <select
-              value={unidadeId}
-              onChange={(e) => setUnidadeId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">Selecione a unidade...</option>
-              {(unidades ?? []).map((u) => (
-                <option key={u.id} value={u.id}>{u.nome}</option>
-              ))}
-            </select>
-          </div>
+          {/* Unidade — oculta o seletor se o usuário tem apenas 1 */}
+          {(unidades ?? []).length !== 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
+              <select
+                value={unidadeId}
+                onChange={(e) => setUnidadeId(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Selecione a unidade...</option>
+                {(unidades ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>{u.nome}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Data */}
           <div>
