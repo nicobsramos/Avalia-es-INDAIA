@@ -54,7 +54,6 @@ export default async function handler(req: any, res: any) {
   const { data: rows, error } = await (admin as any)
     .from('usuarios')
     .select('id, nome, role, ver_tudo, setores_avaliacao')
-    .eq('status', 'aprovado')
     .order('nome')
 
   if (error) return res.status(500).json({ error: error.message })
