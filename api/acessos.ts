@@ -53,46 +53,23 @@ export default async function handler(req: any, res: any) {
 
   const { data: rows, error } = await (admin as any)
     .from('usuarios')
-    .select('id, nome, role, ver_tudo, setores_avaliacao')
-    .order('nome')
+    .select('id, nome, role, ver_tudo, setores_avaliacao, ultimo_acesso')
+    .order('ultimo_acesso', { ascending: false, nullsFirst: false })
 
   if (error) return res.status(500).json({ error: error.message })
-
-  // Busca last_sign_in_at de todos os usuários via Auth Admin
-  let allAuthUsers: any[] = []
-  let page = 1
-  while (true) {
-    const { data: pageData } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
-    const users = pageData?.users ?? []
-    allAuthUsers = allAuthUsers.concat(users)
-    if (users.length < 1000) break
-    page++
-  }
-
-  const authMap: Record<string, { email: string; last_sign_in_at: string | null }> = {}
-  for (const u of allAuthUsers) {
-    authMap[u.id] = { email: u.email ?? '', last_sign_in_at: u.last_sign_in_at ?? null }
-  }
 
   const usuarios = (rows ?? [])
     .map((u: any) => ({
       id: u.id,
       nome: u.nome,
-      email: authMap[u.id]?.email ?? '',
       role: u.role as string,
       ver_tudo: u.ver_tudo ?? false,
       setores: toChecklistSetores(u.setores_avaliacao ?? []),
-      ultimo_acesso: authMap[u.id]?.last_sign_in_at ?? null,
+      ultimo_acesso: u.ultimo_acesso ?? null,
     }))
     .filter((u: any) => {
       if (!setoresPermitidos) return true
       return u.setores.some((s: string) => (setoresPermitidos as string[]).includes(s))
-    })
-    .sort((a: any, b: any) => {
-      if (!a.ultimo_acesso && !b.ultimo_acesso) return 0
-      if (!a.ultimo_acesso) return 1
-      if (!b.ultimo_acesso) return -1
-      return new Date(b.ultimo_acesso).getTime() - new Date(a.ultimo_acesso).getTime()
     })
 
   return res.json({ usuarios })

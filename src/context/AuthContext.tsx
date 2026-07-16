@@ -91,6 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMustChangePassword(event === 'PASSWORD_RECOVERY' || !!meta?.must_change_password)
         // Carrega perfil em background — não bloqueia o loading
         carregarPerfil(session.user.id).catch(() => setPerfilReady(true))
+        // Registra último acesso a cada abertura/refresh de sessão
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          void supabase.rpc('update_ultimo_acesso')
+        }
       } else {
         setPerfil(null)
         setPerfilReady(true)
