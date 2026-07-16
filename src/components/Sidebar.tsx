@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { toChecklistSetores } from '../hooks/useChecklistDiario'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const FLAVIA_EMAIL = 'flaviavo05@gmail.com'
 
 interface Props {
   open: boolean
@@ -50,12 +51,23 @@ const navOrcamento = {
   ),
 }
 
+const navAcessos = {
+  to: '/acessos',
+  label: 'Acessos',
+  icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+}
+
 export function Sidebar({ open, onClose }: Props) {
   const { perfil, user, signOut } = useAuth()
   const isAdmin = user?.email === ADMIN_EMAIL
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0 || isAdmin
   const podeVerOrcamento = perfil?.pode_orcamento === true || perfil?.ver_tudo === true || isAdmin
+  const podeVerAcessos = isAdmin || perfil?.ver_tudo === true || user?.email === FLAVIA_EMAIL || perfil?.role !== 'leitura'
 
   return (
     <>
@@ -94,6 +106,7 @@ export function Sidebar({ open, onClose }: Props) {
           {[
             ...navItemsBase,
             ...(podeVerChecklist ? [navChecklist] : []),
+            ...(podeVerAcessos ? [navAcessos] : []),
             ...(podeVerOrcamento ? [navOrcamento] : []),
           ].map((item) => (
             <NavLink

@@ -19,10 +19,12 @@ import { ChecklistDiario } from './pages/ChecklistDiario'
 import { NovoChecklist } from './pages/ChecklistDiario/NovoChecklist'
 import { DetalheChecklist } from './pages/ChecklistDiario/DetalheChecklist'
 import { Orcamento } from './pages/Orcamento'
+import { Acessos } from './pages/Acessos'
 import { LoadingSpinner } from './components/LoadingSpinner'
 
 // Keep in sync with api/admin-solicitacoes.ts ADMIN_EMAIL
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const FLAVIA_EMAIL = 'flaviavo05@gmail.com'
 
 function SoEscrita({ children }: { children: ReactNode }) {
   const { perfil } = useAuth()
@@ -71,6 +73,9 @@ function AppRoutes() {
           <Route path="checklist-diario/:id" element={<DetalheChecklist />} />
           {(perfil?.pode_orcamento === true || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) && (
             <Route path="orcamento" element={<Orcamento />} />
+          )}
+          {(perfil?.role !== 'leitura' || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || user?.email === FLAVIA_EMAIL) && (
+            <Route path="acessos" element={<Acessos />} />
           )}
           {user?.email === ADMIN_EMAIL && (
             <Route path="admin/solicitacoes" element={<AdminSolicitacoes />} />
