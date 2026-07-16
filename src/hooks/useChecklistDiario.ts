@@ -20,6 +20,7 @@ export interface ChecklistCozinha {
   responsavel: string
   obs_gerais: string | null
   criado_em: string
+  setor: string | null
 }
 
 export interface ChecklistResposta {
@@ -72,19 +73,20 @@ export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter
   return useQuery({
     queryKey: ['checklist-cozinha-itens', tipo, setoresFilter],
     queryFn: async (): Promise<ChecklistCozinhaItem[]> => {
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from('checklist_cozinha_itens')
         .select('*')
         .eq('tipo', tipo)
         .eq('ativo', true)
         .order('ordem')
-      if (error) throw error
-      const all = (data ?? []) as ChecklistCozinhaItem[]
+      // Filtra no banco — não depende só do client-side para evitar vazamento entre setores
       if (setoresFilter && setoresFilter.length > 0) {
-        // Strict: only show items explicitly tagged for the user's sectors
-        return all.filter((item) => !!item.setor && setoresFilter.includes(item.setor))
+        q = q.in('setor', setoresFilter)
       }
-      return all
+      const { data, error } = await q
+      if (error) throw error
+      return (data ?? []) as ChecklistCozinhaItem[]
     },
     staleTime: 1000 * 60 * 60,
   })

@@ -20,7 +20,10 @@ export function DetalheChecklist() {
   const navigate = useNavigate()
   const { user, perfil } = useAuth()
   const { data, isLoading, error } = useChecklistDetalhe(id)
-  const { data: itens } = useChecklistItens(data?.checklist.tipo ?? 'abertura')
+  const { data: itens } = useChecklistItens(
+    data?.checklist.tipo ?? 'abertura',
+    data?.checklist.setor ? [data.checklist.setor] : undefined,
+  )
   const deletar = useDeleteChecklist()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
