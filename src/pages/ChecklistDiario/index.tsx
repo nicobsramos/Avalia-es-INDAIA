@@ -8,6 +8,14 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com'])
 
+// Usuários que só visualizam histórico — não preenchem checklists
+const APENAS_HISTORICO = new Set([
+  'n.ramos.indaia@gmail.com',
+  'laisalves.indaia@gmail.com',
+  'k.guatelli.indaia@gmail.com',
+  'g.bueno.indaia@gmail.com',
+])
+
 const TODAY = new Date().toISOString().split('T')[0]
 
 const TIPO_COR: Record<string, string> = {
@@ -44,12 +52,14 @@ function CardUnidadeHoje({
   unidadeNome,
   checklistsHoje,
   podeApagar,
+  podePreencher,
   onDelete,
 }: {
   unidadeId: string
   unidadeNome: string
   checklistsHoje: { id: string; tipo: string }[]
   podeApagar: boolean
+  podePreencher: boolean
   onDelete: (id: string) => void
 }) {
   const navigate = useNavigate()
@@ -107,13 +117,15 @@ function CardUnidadeHoje({
                     )
                   )}
                 </>
-              ) : (
+              ) : podePreencher ? (
                 <button
                   onClick={() => navigate(`/checklist-diario/novo?tipo=${tipo}&unidade_id=${unidadeId}`)}
                   className="text-xs text-brand-600 font-semibold hover:underline"
                 >
                   Preencher agora
                 </button>
+              ) : (
+                <span className="text-xs text-gray-300">Não preenchido</span>
               )}
             </div>
           )
@@ -143,6 +155,7 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
 
   // Gestores podem apagar qualquer um; líderes não-leitura podem apagar os próprios
   const podeApagar = perfil?.ver_tudo === true || GESTORES_CHECKLIST.has(user?.email ?? '') || perfil?.role !== 'leitura'
+  const podePreencher = !APENAS_HISTORICO.has(user?.email ?? '')
   const hoje = (lista ?? []).filter((c) => c.data_operacao === TODAY)
   const historico = (lista ?? []).filter((c) => c.data_operacao !== TODAY)
 
@@ -155,15 +168,17 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
-        <button
-          onClick={() => navigate('/checklist-diario/novo')}
-          className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Novo
-        </button>
+        {podePreencher && (
+          <button
+            onClick={() => navigate('/checklist-diario/novo')}
+            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Novo
+          </button>
+        )}
       </div>
 
       {/* Status de hoje por unidade */}
@@ -182,6 +197,7 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
                 unidadeNome={u.nome}
                 checklistsHoje={hoje.filter((c) => c.unidade_id === u.id)}
                 podeApagar={podeApagar}
+                podePreencher={podePreencher}
                 onDelete={handleDelete}
               />
             ))}
@@ -281,6 +297,7 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
   )
 
   const podeApagar = perfil?.ver_tudo === true || GESTORES_CHECKLIST.has(user?.email ?? '')
+  const podePreencher = !APENAS_HISTORICO.has(user?.email ?? '')
   const historico = (lista ?? []).slice(0, 50)
 
   async function handleDelete(id: string) {
@@ -292,15 +309,17 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
     <div className="px-4 py-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
-        <button
-          onClick={() => navigate('/checklist-diario/novo')}
-          className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Novo
-        </button>
+        {podePreencher && (
+          <button
+            onClick={() => navigate('/checklist-diario/novo')}
+            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Novo
+          </button>
+        )}
       </div>
 
       {/* Compliance da semana */}
