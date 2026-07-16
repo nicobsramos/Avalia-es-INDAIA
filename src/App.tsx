@@ -14,7 +14,6 @@ import { DetalheAvaliacao } from './pages/Avaliacoes/DetalheAvaliacao'
 import { SegAlimentar5S } from './pages/SegAlimentar5S'
 import { NovaAvaliacaoNutri } from './pages/SegAlimentar5S/NovaAvaliacaoNutri'
 import { DetalheAvaliacaoNutri } from './pages/SegAlimentar5S/DetalheAvaliacaoNutri'
-import { AdminSolicitacoes } from './pages/Admin/Solicitacoes'
 import { ChecklistDiario } from './pages/ChecklistDiario'
 import { NovoChecklist } from './pages/ChecklistDiario/NovoChecklist'
 import { DetalheChecklist } from './pages/ChecklistDiario/DetalheChecklist'
@@ -77,9 +76,7 @@ function AppRoutes() {
           {(perfil?.role !== 'leitura' || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || user?.email === FLAVIA_EMAIL) && (
             <Route path="acessos" element={<Acessos />} />
           )}
-          {user?.email === ADMIN_EMAIL && (
-            <Route path="admin/solicitacoes" element={<AdminSolicitacoes />} />
-          )}
+          {/* /admin/solicitacoes foi integrado à tela /acessos */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
