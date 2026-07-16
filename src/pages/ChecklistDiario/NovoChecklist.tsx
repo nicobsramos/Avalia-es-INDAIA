@@ -24,6 +24,42 @@ function detectarTipoPadrao(): 'abertura' | 'fechamento' {
   return hora < 14 ? 'abertura' : 'fechamento'
 }
 
+function getJanela(tipo: 'abertura' | 'fechamento'): {
+  bloqueado: boolean
+  dataOperacao: string
+  mensagem: string
+} {
+  const now = new Date()
+  const hora = now.getHours()
+
+  if (tipo === 'abertura') {
+    // Abertura: aceita de 00h às 16h59; bloqueada das 17h às 23h59
+    const bloqueado = hora >= 17
+    return {
+      bloqueado,
+      dataOperacao: now.toISOString().slice(0, 10),
+      mensagem: 'Horário encerrado para abertura. O prazo vai de 00h às 17h.',
+    }
+  }
+
+  // Fechamento: aceita das 17h às 04h59 do dia seguinte
+  // Na madrugada (00h–04h59) a competência é o dia anterior
+  const bloqueado = hora >= 5 && hora < 17
+  let dataOp: string
+  if (hora < 5) {
+    const ontem = new Date(now)
+    ontem.setDate(ontem.getDate() - 1)
+    dataOp = ontem.toISOString().slice(0, 10)
+  } else {
+    dataOp = now.toISOString().slice(0, 10)
+  }
+  return {
+    bloqueado,
+    dataOperacao: dataOp,
+    mensagem: 'Horário encerrado para fechamento. O prazo vai das 17h às 05h do dia seguinte.',
+  }
+}
+
 export function NovoChecklist() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -34,12 +70,14 @@ export function NovoChecklist() {
   const [tipo, setTipo] = useState<'abertura' | 'fechamento'>(
     (params.get('tipo') as 'abertura' | 'fechamento') ?? detectarTipoPadrao(),
   )
-  const [dataOperacao] = useState(() => new Date().toISOString().slice(0, 10))
   const [responsavel, setResponsavel] = useState(perfil?.nome ?? '')
   const [itensState, setItensState] = useState<Record<string, ItemState>>({})
   const [obsGerais, setObsGerais] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+
+  const janela = getJanela(tipo)
+  const dataOperacao = janela.dataOperacao
 
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const verTudo = perfil?.ver_tudo === true
@@ -113,6 +151,7 @@ export function NovoChecklist() {
   async function handleSalvar(e: FormEvent) {
     e.preventDefault()
     if (!unidadeId || !user) return
+    if (janela.bloqueado) { setErro(janela.mensagem); return }
     setErro('')
     setSalvando(true)
 
@@ -219,13 +258,21 @@ export function NovoChecklist() {
             </div>
           )}
 
-          {/* Data — sempre hoje, sem possibilidade de alterar */}
+          {/* Data de operação (calculada automaticamente pelo horário) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data de operação</label>
             <div className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm bg-gray-50 text-gray-500">
               {dataOperacao.split('-').reverse().join('/')}
             </div>
           </div>
+
+          {/* Aviso de horário bloqueado */}
+          {janela.bloqueado && (
+            <div className="rounded-lg p-3 bg-red-50 border border-red-200 text-red-700 text-sm space-y-0.5">
+              <p className="font-semibold">Fora do horário permitido</p>
+              <p>{janela.mensagem}</p>
+            </div>
+          )}
 
           {/* Responsável */}
           <div>
@@ -264,7 +311,7 @@ export function NovoChecklist() {
         </div>
 
         <button
-          disabled={!unidadeId || !responsavel.trim() || (!loadExistente && !!existente && !podeEditar)}
+          disabled={!unidadeId || !responsavel.trim() || (!loadExistente && !!existente && !podeEditar) || janela.bloqueado}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
