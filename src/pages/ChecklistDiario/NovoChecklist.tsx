@@ -34,7 +34,7 @@ export function NovoChecklist() {
   const [tipo, setTipo] = useState<'abertura' | 'fechamento'>(
     (params.get('tipo') as 'abertura' | 'fechamento') ?? detectarTipoPadrao(),
   )
-  const [dataOperacao, setDataOperacao] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dataOperacao] = useState(() => new Date().toISOString().slice(0, 10))
   const [responsavel, setResponsavel] = useState(perfil?.nome ?? '')
   const [itensState, setItensState] = useState<Record<string, ItemState>>({})
   const [obsGerais, setObsGerais] = useState('')
@@ -63,10 +63,10 @@ export function NovoChecklist() {
     if (unidades?.length === 1 && !unidadeId) setUnidadeId(unidades[0].id)
   }, [unidades, unidadeId])
 
-  // Quando muda tipo ou data, reseta itens
+  // Quando muda tipo, reseta itens
   useEffect(() => {
     setItensState({})
-  }, [tipo, dataOperacao])
+  }, [tipo])
 
   // Se existente foi carregado e tem dados, pre-carregar respostas
   // (para edição do mesmo autor)
@@ -218,16 +218,12 @@ export function NovoChecklist() {
             </div>
           )}
 
-          {/* Data */}
+          {/* Data — sempre hoje, sem possibilidade de alterar */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data de operação</label>
-            <input
-              type="date"
-              value={dataOperacao}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setDataOperacao(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
+            <div className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm bg-gray-50 text-gray-500">
+              {dataOperacao.split('-').reverse().join('/')}
+            </div>
           </div>
 
           {/* Responsável */}
