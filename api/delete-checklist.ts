@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com'])
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'DELETE') return res.status(405).end()
@@ -27,7 +28,7 @@ export default async function handler(req: any, res: any) {
   const { id } = req.query as Record<string, string>
   if (!id) return res.status(400).json({ error: 'ID obrigatório' })
 
-  const isAdmin = user.email === ADMIN_EMAIL || perfil?.ver_tudo === true
+  const isAdmin = GESTORES_CHECKLIST.has(user.email ?? '') || perfil?.ver_tudo === true
 
   // Não-admin: só pode apagar checklist que ele mesmo criou (e não é role leitura)
   if (!isAdmin) {

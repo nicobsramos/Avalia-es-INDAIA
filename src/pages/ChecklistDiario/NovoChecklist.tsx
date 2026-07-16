@@ -43,6 +43,7 @@ export function NovoChecklist() {
 
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const verTudo = perfil?.ver_tudo === true
+  const isGestor = verTudo || ['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'].includes(user?.email ?? '')
   const unidadeIds = verTudo ? null : (perfil?.unidades_ids ?? null)
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds ?? undefined)
   const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, checklistSetores.length > 0 ? checklistSetores : undefined)
@@ -70,7 +71,7 @@ export function NovoChecklist() {
 
   // Se existente foi carregado e tem dados, pre-carregar respostas
   // (para edição do mesmo autor)
-  const podeEditar = existente && existente.usuario_id === user?.id
+  const podeEditar = existente && (existente.usuario_id === user?.id || isGestor)
 
   function setFeito(itemId: string, feito: boolean) {
     setItensState((prev) => ({

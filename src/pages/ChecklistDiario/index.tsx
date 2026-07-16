@@ -6,6 +6,7 @@ import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com'])
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -140,8 +141,8 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
     </div>
   )
 
-  // Admins podem apagar qualquer um; líderes não-leitura podem apagar os próprios
-  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || perfil?.role !== 'leitura'
+  // Gestores podem apagar qualquer um; líderes não-leitura podem apagar os próprios
+  const podeApagar = perfil?.ver_tudo === true || GESTORES_CHECKLIST.has(user?.email ?? '') || perfil?.role !== 'leitura'
   const hoje = (lista ?? []).filter((c) => c.data_operacao === TODAY)
   const historico = (lista ?? []).filter((c) => c.data_operacao !== TODAY)
 
@@ -279,7 +280,7 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
     </div>
   )
 
-  const podeApagar = perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL
+  const podeApagar = perfil?.ver_tudo === true || GESTORES_CHECKLIST.has(user?.email ?? '')
   const historico = (lista ?? []).slice(0, 50)
 
   async function handleDelete(id: string) {

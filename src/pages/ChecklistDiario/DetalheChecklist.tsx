@@ -5,6 +5,7 @@ import { useChecklistDetalhe, useChecklistItens, useDeleteChecklist } from '../.
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento' }
+const GESTORES_CHECKLIST = new Set(['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'])
 const TIPO_COR: Record<string, string> = {
   abertura: 'bg-blue-100 text-blue-700',
   fechamento: 'bg-purple-100 text-purple-700',
@@ -62,8 +63,9 @@ export function DetalheChecklist() {
     return acc
   }, [])
 
-  const podeEditar = checklist.usuario_id === user?.id
-  const podeApagar = perfil?.ver_tudo === true || user?.email === 'n.ramos.indaia@gmail.com' || (perfil?.role !== 'leitura' && checklist.usuario_id === user?.id)
+  const isGestor = GESTORES_CHECKLIST.has(user?.email ?? '') || perfil?.ver_tudo === true
+  const podeEditar = checklist.usuario_id === user?.id || isGestor
+  const podeApagar = isGestor || (perfil?.role !== 'leitura' && checklist.usuario_id === user?.id)
 
   async function handleDelete() {
     await deletar.mutateAsync(id!)
