@@ -42,11 +42,11 @@ function getJanela(tipo: 'abertura' | 'fechamento'): {
     }
   }
 
-  // Fechamento: aceita das 17h às 04h59 do dia seguinte
-  // Na madrugada (00h–04h59) a competência é o dia anterior
-  const bloqueado = hora >= 5 && hora < 17
+  // Fechamento: aceita das 16h às 03h59 do dia seguinte
+  // Na madrugada (00h–03h59) a competência é o dia anterior
+  const bloqueado = hora >= 4 && hora < 16
   let dataOp: string
-  if (hora < 5) {
+  if (hora < 4) {
     const ontem = new Date(now)
     ontem.setDate(ontem.getDate() - 1)
     dataOp = ontem.toISOString().slice(0, 10)
@@ -56,7 +56,7 @@ function getJanela(tipo: 'abertura' | 'fechamento'): {
   return {
     bloqueado,
     dataOperacao: dataOp,
-    mensagem: 'Horário encerrado para fechamento. O prazo vai das 17h às 05h do dia seguinte.',
+    mensagem: 'Horário encerrado para fechamento. O prazo vai das 16h às 04h do dia seguinte.',
   }
 }
 
