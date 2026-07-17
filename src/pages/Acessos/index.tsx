@@ -33,6 +33,9 @@ interface UsuarioAdmin {
 
 const CARGOS = [
   'Gestor',
+  'Gestor Atendimento',
+  'Gestor Cozinha',
+  'Gestor Bares Almoxarifados',
   'Maitre',
   'Pré evento',
   'Limpeza',
