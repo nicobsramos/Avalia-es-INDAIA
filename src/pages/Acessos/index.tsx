@@ -44,6 +44,7 @@ const CARGOS = [
   'Aux de cozinha',
   'Cozinheiro',
   'Barman/estoquista',
+  'Nutricionista',
 ]
 
 interface Solicitacao {
