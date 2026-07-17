@@ -64,7 +64,11 @@ function useHistoricoOp(competencia: Competencia, unidadeIds: string[] | null, s
       const all = (data ?? []) as AvaliacaoHistorico[]
       if (!setoresPermitidos) return all
       return all.filter((av) =>
-        setoresDaAvaliacao(av).some((s) => setoresPermitidos.includes(s.nome))
+        setoresDaAvaliacao(av).some((s) =>
+          setoresPermitidos.includes(s.nome) ||
+          // legado: setor antigo (ex: "Atendimento") visível para quem tem sub-setor (ex: "Atendimento - Maitres")
+          setoresPermitidos.some((p) => p.startsWith(s.nome + ' - '))
+        )
       )
     },
     staleTime: 1000 * 60 * 2,
@@ -507,7 +511,8 @@ export function Avaliacoes() {
     if (m) sheetVisitas[m[0].toUpperCase()] = row.visitas
   }
 
-  const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Bar - Checklist Semanal', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
+  // 'Atendimento' (legado) incluído para que avaliações feitas antes da separação de sub-setores sejam contabilizadas
+  const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Bar - Checklist Semanal', 'Atendimento', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
@@ -540,9 +545,18 @@ export function Avaliacoes() {
             {notasVisiveis.map((nu) => {
               const metaUnidade = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
-              const setores = nu.notas_setores.filter((ns) =>
-                SETORES_OP.includes(ns.setor_nome) && (verTudo || setoresPermitidos.some((p) => p === ns.setor_nome || ns.setor_nome.startsWith(p + ' - ')))
-              )
+              const setores = nu.notas_setores.filter((ns) => {
+                if (!SETORES_OP.includes(ns.setor_nome)) return false
+                // Setor legado (sem sub-setor): só exibe se houver respostas (nota não nula)
+                const isLegado = !ns.setor_nome.includes(' - ') && SETORES_OP.some((s) => s.startsWith(ns.setor_nome + ' - '))
+                if (isLegado && ns.nota === null) return false
+                return verTudo || setoresPermitidos.some((p) =>
+                  p === ns.setor_nome ||
+                  ns.setor_nome.startsWith(p + ' - ') ||
+                  // legado: setor antigo visível para quem tem sub-setor (ex: "Atendimento - Maitres")
+                  p.startsWith(ns.setor_nome + ' - ')
+                )
+              })
               return (
                 <div key={nu.unidade_id} className="px-4 py-3">
                   <div className="mb-2">

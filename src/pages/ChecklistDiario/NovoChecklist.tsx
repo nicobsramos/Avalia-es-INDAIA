@@ -8,6 +8,7 @@ import {
   useSalvarChecklist,
   toChecklistSetores,
 } from '../../hooks/useChecklistDiario'
+import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const TIPO_LABEL = { abertura: 'Abertura', fechamento: 'Fechamento' }
@@ -182,7 +183,24 @@ export function NovoChecklist() {
         : (typeof err === 'object' && err !== null && 'message' in err)
           ? String((err as { message: unknown }).message)
           : JSON.stringify(err)
-      setErro('Erro ao salvar: ' + msg)
+
+      // Checklist já existe para esta data/unidade/tipo — redireciona para o existente
+      if (msg.includes('duplicate key value violates unique constraint')) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: dup } = await (supabase as any)
+            .from('checklist_cozinha')
+            .select('id')
+            .eq('unidade_id', unidadeId)
+            .eq('tipo', tipo)
+            .eq('data_operacao', dataOperacao)
+            .maybeSingle()
+          if (dup?.id) { navigate(`/checklist-diario/${dup.id}`); return }
+        } catch { /* ignora e mostra mensagem amigável abaixo */ }
+        setErro('Este checklist já foi preenchido para esta data. Volte ao início para visualizá-lo.')
+      } else {
+        setErro('Erro ao salvar: ' + msg)
+      }
       setSalvando(false)
     }
   }
@@ -311,7 +329,7 @@ export function NovoChecklist() {
         </div>
 
         <button
-          disabled={!unidadeId || !responsavel.trim() || (!loadExistente && !!existente && !podeEditar) || janela.bloqueado}
+          disabled={!unidadeId || !responsavel.trim() || loadExistente || (!!existente && !podeEditar) || janela.bloqueado}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >

@@ -164,6 +164,8 @@ function ViewSimples() {
 // ─── view admin (Nico) ────────────────────────────────────────────────────────
 
 function ViewAdmin() {
+  const { user } = useAuth()
+  const isMaster = user?.email === ADMIN_EMAIL
   const [lista, setLista] = useState<Solicitacao[]>([])
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [unidades, setUnidades] = useState<Unidade[]>([])
@@ -183,6 +185,7 @@ function ViewAdmin() {
   const [editPodeNutri, setEditPodeNutri] = useState(false)
   const [editPodeOrcamento, setEditPodeOrcamento] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [apagando, setApagando] = useState<string | null>(null)
 
   async function carregarPendentes() {
     setLoadingPend(true)
@@ -263,6 +266,24 @@ function ViewAdmin() {
     ))
     setEditandoUser(null)
     setSalvando(false)
+  }
+
+  async function apagarUsuario(u: UsuarioAdmin) {
+    if (!confirm(`Apagar o usuário "${u.nome}" (${u.email})?\n\nEsta ação não pode ser desfeita.`)) return
+    setApagando(u.id)
+    const token = await getToken()
+    const res = await fetch('/api/admin-delete-user', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId: u.id }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      alert('Erro ao apagar: ' + ((body as { error?: string }).error ?? 'Erro desconhecido'))
+    } else {
+      setUsuarios((prev) => prev.filter((x) => x.id !== u.id))
+    }
+    setApagando(null)
   }
 
   const cidades = useMemo(() => [...new Set(unidades.map((u) => extractCidade(u.nome)))].sort(), [unidades])
@@ -370,10 +391,26 @@ function ViewAdmin() {
                       )}
                       <span className={`text-xs mt-0.5 block ${acesso.cls}`}>{acesso.texto}</span>
                     </div>
-                    <button onClick={() => abrirEdicao(u)}
-                      className="shrink-0 text-xs text-brand-600 hover:text-brand-700 font-medium px-2 py-1 rounded hover:bg-brand-50 transition-colors">
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => abrirEdicao(u)}
+                        className="text-xs text-brand-600 hover:text-brand-700 font-medium px-2 py-1 rounded hover:bg-brand-50 transition-colors">
+                        Editar
+                      </button>
+                      {isMaster && (
+                        <button
+                          disabled={apagando === u.id}
+                          onClick={() => apagarUsuario(u)}
+                          className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors disabled:opacity-40"
+                          title="Apagar usuário"
+                        >
+                          {apagando === u.id ? '…' : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
