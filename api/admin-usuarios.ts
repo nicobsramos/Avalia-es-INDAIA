@@ -89,5 +89,21 @@ export default async function handler(req: any, res: any) {
     return res.json({ ok: true })
   }
 
+  // ── DELETE: apaga usuário do sistema ─────────────────────────────────────────
+  if (req.method === 'DELETE') {
+    const { userId } = req.body ?? {}
+    if (!userId) return res.status(400).json({ error: 'userId obrigatório' })
+
+    // Busca o caller id para impedir auto-exclusão
+    const token = (req.headers['authorization'] as string).slice(7)
+    const { data: { user: caller } } = await admin.auth.getUser(token)
+    if (caller?.id === userId) return res.status(400).json({ error: 'Não é possível apagar seu próprio usuário' })
+
+    await (admin as any).from('usuarios').delete().eq('id', userId)
+    const { error } = await admin.auth.admin.deleteUser(userId)
+    if (error) return res.status(500).json({ error: error.message })
+    return res.json({ ok: true })
+  }
+
   return res.status(405).end()
 }

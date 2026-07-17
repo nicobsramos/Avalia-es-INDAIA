@@ -272,7 +272,7 @@ function ViewAdmin() {
     if (!confirm(`Apagar o usuário "${u.nome}" (${u.email})?\n\nEsta ação não pode ser desfeita.`)) return
     setApagando(u.id)
     const token = await getToken()
-    const res = await fetch('/api/admin-delete-user', {
+    const res = await fetch('/api/admin-usuarios', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ userId: u.id }),
