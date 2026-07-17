@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
   // ── GET: lista todos os usuários + unidades + setores disponíveis ───────────
   if (req.method === 'GET') {
     const [{ data: rows, error }, { data: unidades }, { data: setoresRows }] = await Promise.all([
-      (admin as any).from('usuarios').select('id, nome, role, status, unidades_ids, setores_avaliacao, pode_nutri, pode_orcamento').order('nome'),
+      (admin as any).from('usuarios').select('id, nome, role, status, unidades_ids, setores_avaliacao, pode_nutri, pode_orcamento, cargo').order('nome'),
       (admin as any).from('unidades').select('id, nome').eq('ativo', true).order('nome'),
       (admin as any).from('setores').select('nome').order('ordem'),
     ])
@@ -57,6 +57,7 @@ export default async function handler(req: any, res: any) {
         setores_avaliacao: u.setores_avaliacao ?? [],
         pode_nutri: u.pode_nutri ?? false,
         pode_orcamento: u.pode_orcamento ?? false,
+        cargo: u.cargo ?? null,
         ultimo_acesso: authMap[u.id]?.last_sign_in_at ?? null,
       })),
       unidades: unidades ?? [],
@@ -66,7 +67,7 @@ export default async function handler(req: any, res: any) {
 
   // ── PATCH: atualiza campos do usuário ────────────────────────────────────────
   if (req.method === 'PATCH') {
-    const { userId, nome, unidades_ids, role, setores_avaliacao, pode_nutri, pode_orcamento } = req.body ?? {}
+    const { userId, nome, unidades_ids, role, setores_avaliacao, pode_nutri, pode_orcamento, cargo } = req.body ?? {}
     if (!userId) return res.status(400).json({ error: 'userId é obrigatório' })
 
     const update: Record<string, any> = {}
@@ -76,6 +77,7 @@ export default async function handler(req: any, res: any) {
     if (['rede', 'lider', 'leitura'].includes(role)) update.role  = role
     if (typeof pode_nutri === 'boolean') update.pode_nutri         = pode_nutri
     if (typeof pode_orcamento === 'boolean') update.pode_orcamento = pode_orcamento
+    if ('cargo' in (req.body ?? {}))     update.cargo              = cargo ?? null
 
     if (Object.keys(update).length === 0)
       return res.status(400).json({ error: 'Nada para atualizar' })

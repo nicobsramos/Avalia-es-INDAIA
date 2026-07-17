@@ -27,8 +27,21 @@ interface UsuarioAdmin {
   setores_avaliacao: string[]
   pode_nutri: boolean
   pode_orcamento: boolean
+  cargo: string | null
   ultimo_acesso: string | null
 }
+
+const CARGOS = [
+  'Gestor',
+  'Maitre',
+  'Pré evento',
+  'Limpeza',
+  'Chef',
+  'Chef Regional',
+  'Aux de cozinha',
+  'Cozinheiro',
+  'Barman/estoquista',
+]
 
 interface Solicitacao {
   id: string
@@ -186,6 +199,7 @@ function ViewAdmin() {
   const [editPodeOrcamento, setEditPodeOrcamento] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [apagando, setApagando] = useState<string | null>(null)
+  const [salvandoCargo, setSalvandoCargo] = useState<string | null>(null)
 
   async function carregarPendentes() {
     setLoadingPend(true)
@@ -266,6 +280,22 @@ function ViewAdmin() {
     ))
     setEditandoUser(null)
     setSalvando(false)
+  }
+
+  async function atualizarCargo(userId: string, cargo: string | null) {
+    setSalvandoCargo(userId)
+    const token = await getToken()
+    const res = await fetch('/api/admin-usuarios', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, cargo }),
+    })
+    if (res.ok) {
+      setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, cargo } : u))
+    } else {
+      alert('Erro ao atualizar cargo.')
+    }
+    setSalvandoCargo(null)
   }
 
   async function apagarUsuario(u: UsuarioAdmin) {
@@ -389,7 +419,19 @@ function ViewAdmin() {
                       {u.setores_avaliacao.length > 0 && (
                         <p className="text-xs text-gray-500 mt-0.5">{u.setores_avaliacao.join(', ')}</p>
                       )}
-                      <span className={`text-xs mt-0.5 block ${acesso.cls}`}>{acesso.texto}</span>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <select
+                          value={u.cargo ?? ''}
+                          disabled={salvandoCargo === u.id}
+                          onChange={(e) => atualizarCargo(u.id, e.target.value || null)}
+                          className="text-xs border border-gray-200 rounded-md px-2 py-1 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-brand-400 disabled:opacity-50"
+                        >
+                          <option value="">— Cargo —</option>
+                          {CARGOS.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        {salvandoCargo === u.id && <span className="text-xs text-gray-400">Salvando…</span>}
+                      </div>
+                      <span className={`text-xs mt-1 block ${acesso.cls}`}>{acesso.texto}</span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button onClick={() => abrirEdicao(u)}
