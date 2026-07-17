@@ -69,10 +69,21 @@ export function toChecklistSetores(setoresAvaliacao: string[]): string[] {
   return Array.from(result)
 }
 
+// Setores de Atendimento incluindo variantes de evento (legado + evento/sem evento)
+const ATENDIMENTO_SETORES = ['Atendimento', 'Atendimento - Evento', 'Atendimento - Sem Evento']
+
+// Expande 'Atendimento' para incluir todas as variantes (legado + evento)
+function expandirSetores(setores: string[]): string[] {
+  if (!setores.includes('Atendimento')) return setores
+  return [...setores.filter((s) => s !== 'Atendimento'), ...ATENDIMENTO_SETORES]
+}
+
 export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter?: string[]) {
   return useQuery({
     queryKey: ['checklist-cozinha-itens', tipo, setoresFilter],
     queryFn: async (): Promise<ChecklistCozinhaItem[]> => {
+      // Array vazio explícito = nenhum item deve ser carregado (ex: Atendimento abertura sem tipo de dia escolhido)
+      if (Array.isArray(setoresFilter) && setoresFilter.length === 0) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any)
         .from('checklist_cozinha_itens')
@@ -99,6 +110,8 @@ export function useChecklistList(unidadeIds?: string[] | null, setores?: string[
       // Array vazio explícito = usuário sem setor configurado → retorna nada (sem vazamento entre setores)
       if (Array.isArray(setores) && setores.length === 0) return []
 
+      const setoresExpanded = setores ? expandirSetores(setores) : null
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = (supabase as any)
         .from('checklist_cozinha')
@@ -108,7 +121,7 @@ export function useChecklistList(unidadeIds?: string[] | null, setores?: string[
         .limit(90)
 
       if (unidadeIds && unidadeIds.length > 0) q = q.in('unidade_id', unidadeIds)
-      if (setores && setores.length > 0) q = q.in('setor', setores)
+      if (setoresExpanded && setoresExpanded.length > 0) q = q.in('setor', setoresExpanded)
 
       const { data, error } = await q
       if (error) throw error
@@ -116,8 +129,8 @@ export function useChecklistList(unidadeIds?: string[] | null, setores?: string[
       const rows = (data ?? []) as (ChecklistCozinha & { unidade: { nome: string }; setor: string | null })[]
 
       // Filtro client-side como garantia: nunca vazar checklists de outros setores
-      if (setores && setores.length > 0) {
-        return rows.filter((c) => c.setor !== null && setores.includes(c.setor))
+      if (setoresExpanded && setoresExpanded.length > 0) {
+        return rows.filter((c) => c.setor !== null && setoresExpanded.includes(c.setor))
       }
       return rows
     },
@@ -169,8 +182,12 @@ export function useChecklistExistente(
         .eq('unidade_id', unidadeId!)
         .eq('tipo', tipo)
         .eq('data_operacao', data)
-      // Filtra pelo setor do usuário para Bar não conflitar com Cozinha na mesma unidade
-      if (setor) q = q.eq('setor', setor)
+      // Filtra pelo setor — Atendimento inclui todas as variantes (evento/sem evento)
+      if (setor === 'Atendimento') {
+        q = q.in('setor', ATENDIMENTO_SETORES)
+      } else if (setor) {
+        q = q.eq('setor', setor)
+      }
       const { data: result, error } = await q
         .maybeSingle()
       if (error) throw error
@@ -204,7 +221,10 @@ export function useChecklistCompliance(unidadeIds?: string[] | null, setores?: s
         .select('unidade_id, tipo')
         .gte('data_operacao', mondayStr)
         .lte('data_operacao', todayStr)
-      if (setores && setores.length > 0) checklistsQ = checklistsQ.in('setor', setores)
+      const setoresComplianceExpanded = setores ? expandirSetores(setores) : null
+      if (setoresComplianceExpanded && setoresComplianceExpanded.length > 0) {
+        checklistsQ = checklistsQ.in('setor', setoresComplianceExpanded)
+      }
 
       const [{ data: unidades, error: e1 }, { data: checklists, error: e2 }] = await Promise.all([
         unidadesQ,

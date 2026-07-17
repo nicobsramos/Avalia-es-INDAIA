@@ -76,6 +76,7 @@ export function NovoChecklist() {
   const [obsGerais, setObsGerais] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [eventoTipo, setEventoTipo] = useState<'evento' | 'sem_evento' | null>(null)
 
   const janela = getJanela(tipo)
   const dataOperacao = janela.dataOperacao
@@ -84,8 +85,19 @@ export function NovoChecklist() {
   const verTudo = perfil?.ver_tudo === true
   const isGestor = verTudo || ['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'].includes(user?.email ?? '')
   const unidadeIds = verTudo ? null : (perfil?.unidades_ids ?? null)
+
+  // Atendimento abertura: usuário escolhe entre dia com/sem evento
+  const isAtendimentoAbertura = checklistSetores.includes('Atendimento') && tipo === 'abertura'
+  const effectiveSetor: string | null = isAtendimentoAbertura
+    ? (eventoTipo === 'evento' ? 'Atendimento - Evento' : eventoTipo === 'sem_evento' ? 'Atendimento - Sem Evento' : null)
+    : (checklistSetores[0] ?? null)
+
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds ?? undefined)
-  const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, checklistSetores.length > 0 ? checklistSetores : undefined)
+  // Para Atendimento abertura: [] enquanto sem escolha (retorna nada); setor específico após escolha
+  const itensFilter = isAtendimentoAbertura
+    ? (effectiveSetor ? [effectiveSetor] : [])
+    : (checklistSetores.length > 0 ? checklistSetores : undefined)
+  const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, itensFilter)
   const { data: existente, isLoading: loadExistente } = useChecklistExistente(
     unidadeId || undefined,
     tipo,
@@ -103,9 +115,10 @@ export function NovoChecklist() {
     if (unidades?.length === 1 && !unidadeId) setUnidadeId(unidades[0].id)
   }, [unidades, unidadeId])
 
-  // Quando muda tipo, reseta itens
+  // Quando muda tipo, reseta itens e escolha de evento
   useEffect(() => {
     setItensState({})
+    setEventoTipo(null)
   }, [tipo])
 
   // Se existente foi carregado e tem dados, pre-carregar respostas
@@ -171,7 +184,7 @@ export function NovoChecklist() {
         data_operacao: dataOperacao,
         responsavel,
         obs_gerais: obsGerais,
-        setor: checklistSetores[0] ?? null,
+        setor: effectiveSetor,
         respostas,
       })
 
@@ -259,6 +272,34 @@ export function NovoChecklist() {
             </div>
           </div>
 
+          {/* Tipo de dia — apenas Atendimento abertura */}
+          {isAtendimentoAbertura && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de dia</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: 'sem_evento', label: 'Dia sem evento', cor: 'blue' },
+                  { value: 'evento',     label: 'Dia com evento', cor: 'green' },
+                ] as const).map(({ value, label, cor }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setEventoTipo(value)}
+                    className={`py-3 rounded-lg text-sm font-semibold border-2 transition-all ${
+                      eventoTipo === value
+                        ? cor === 'blue'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Unidade — oculta o seletor se o usuário tem apenas 1 */}
           {(unidades ?? []).length !== 1 && (
             <div>
@@ -329,7 +370,7 @@ export function NovoChecklist() {
         </div>
 
         <button
-          disabled={!unidadeId || !responsavel.trim() || loadExistente || (!!existente && !podeEditar) || janela.bloqueado}
+          disabled={!unidadeId || !responsavel.trim() || loadExistente || (isAtendimentoAbertura && !eventoTipo) || (!!existente && !podeEditar) || janela.bloqueado}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
