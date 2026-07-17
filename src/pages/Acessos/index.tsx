@@ -32,19 +32,19 @@ interface UsuarioAdmin {
 }
 
 const CARGOS = [
-  'Gestor',
-  'Gestor Atendimento',
-  'Gestor Cozinha',
-  'Gestor Bares Almoxarifados',
-  'Maitre',
-  'Pré evento',
-  'Limpeza',
+  'Aux de cozinha',
+  'Barman/estoquista',
   'Chef',
   'Chef Regional',
-  'Aux de cozinha',
   'Cozinheiro',
-  'Barman/estoquista',
+  'Gestor',
+  'Gestor Atendimento',
+  'Gestor Bares Almoxarifados',
+  'Gestor Cozinha',
+  'Limpeza',
+  'Maitre',
   'Nutricionista',
+  'Pré evento',
 ]
 
 interface Solicitacao {
