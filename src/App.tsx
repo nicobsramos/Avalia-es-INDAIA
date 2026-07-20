@@ -24,6 +24,7 @@ import { LoadingSpinner } from './components/LoadingSpinner'
 // Keep in sync with api/admin-solicitacoes.ts ADMIN_EMAIL
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const FLAVIA_EMAIL = 'flaviavo05@gmail.com'
+const JULIA_EMAIL  = 'nutrijuliamafra@gmail.com'
 
 function SoEscrita({ children }: { children: ReactNode }) {
   const { perfil } = useAuth()
@@ -70,10 +71,10 @@ function AppRoutes() {
           <Route path="checklist-diario" element={<ChecklistDiario />} />
           <Route path="checklist-diario/novo" element={<NovoChecklist />} />
           <Route path="checklist-diario/:id" element={<DetalheChecklist />} />
-          {(perfil?.pode_orcamento === true || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) && (
+          {user?.email !== JULIA_EMAIL && (perfil?.pode_orcamento === true || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) && (
             <Route path="orcamento" element={<Orcamento />} />
           )}
-          {(perfil?.role !== 'leitura' || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || user?.email === FLAVIA_EMAIL) && (
+          {user?.email !== JULIA_EMAIL && (perfil?.role !== 'leitura' || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL || user?.email === FLAVIA_EMAIL) && (
             <Route path="acessos" element={<Acessos />} />
           )}
           {/* /admin/solicitacoes foi integrado à tela /acessos */}

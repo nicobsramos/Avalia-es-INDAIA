@@ -4,6 +4,7 @@ import { toChecklistSetores } from '../hooks/useChecklistDiario'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const FLAVIA_EMAIL = 'flaviavo05@gmail.com'
+const JULIA_EMAIL  = 'nutrijuliamafra@gmail.com'
 
 interface Props {
   open: boolean
@@ -64,10 +65,11 @@ const navAcessos = {
 export function Sidebar({ open, onClose }: Props) {
   const { perfil, user, signOut } = useAuth()
   const isAdmin = user?.email === ADMIN_EMAIL
+  const isJulia = user?.email === JULIA_EMAIL
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const podeVerChecklist = perfil?.ver_tudo === true || checklistSetores.length > 0 || isAdmin
-  const podeVerOrcamento = perfil?.pode_orcamento === true || perfil?.ver_tudo === true || isAdmin
-  const podeVerAcessos = isAdmin || perfil?.ver_tudo === true || user?.email === FLAVIA_EMAIL || perfil?.role !== 'leitura'
+  const podeVerOrcamento = !isJulia && (perfil?.pode_orcamento === true || perfil?.ver_tudo === true || isAdmin)
+  const podeVerAcessos = !isJulia && (isAdmin || perfil?.ver_tudo === true || user?.email === FLAVIA_EMAIL || perfil?.role !== 'leitura')
 
   return (
     <>
