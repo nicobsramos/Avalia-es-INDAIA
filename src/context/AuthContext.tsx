@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Usuario } from '../types'
 
@@ -18,6 +19,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [perfil, setPerfil] = useState<Usuario | null>(null)
@@ -89,6 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const meta = session.user.user_metadata as { must_change_password?: boolean }
         setMustChangePassword(event === 'PASSWORD_RECOVERY' || !!meta?.must_change_password)
+        // Novo login: limpa cache para não mostrar dados do usuário anterior
+        if (event === 'SIGNED_IN') {
+          queryClient.clear()
+        }
         // Carrega perfil em background — não bloqueia o loading
         carregarPerfil(session.user.id).catch(() => setPerfilReady(true))
         // Registra último acesso a cada abertura/refresh de sessão
@@ -99,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPerfil(null)
         setPerfilReady(true)
         setMustChangePassword(false)
+        // Logout: limpa todo o cache para o próximo usuário começar do zero
+        queryClient.clear()
       }
 
       // Primeiro evento (INITIAL_SESSION) desbloqueia a tela imediatamente
