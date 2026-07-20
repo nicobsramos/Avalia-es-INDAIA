@@ -51,12 +51,20 @@ export default async function handler(req: any, res: any) {
     return res.status(403).json({ error: 'Acesso negado' })
   }
 
-  const { data: rows, error } = await (admin as any)
-    .from('usuarios')
-    .select('id, nome, role, ver_tudo, setores_avaliacao, ultimo_acesso')
-    .order('ultimo_acesso', { ascending: false, nullsFirst: false })
+  const [{ data: rows, error }, authResult] = await Promise.all([
+    (admin as any)
+      .from('usuarios')
+      .select('id, nome, role, ver_tudo, setores_avaliacao')
+      .order('nome'),
+    admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+  ])
 
   if (error) return res.status(500).json({ error: error.message })
+
+  const authMap: Record<string, string | null> = {}
+  for (const u of authResult.data?.users ?? []) {
+    authMap[u.id] = u.last_sign_in_at ?? null
+  }
 
   const usuarios = (rows ?? [])
     .map((u: any) => ({
@@ -65,8 +73,14 @@ export default async function handler(req: any, res: any) {
       role: u.role as string,
       ver_tudo: u.ver_tudo ?? false,
       setores: toChecklistSetores(u.setores_avaliacao ?? []),
-      ultimo_acesso: u.ultimo_acesso ?? null,
+      ultimo_acesso: authMap[u.id] ?? null,
     }))
+    .sort((a: any, b: any) => {
+      if (!a.ultimo_acesso && !b.ultimo_acesso) return 0
+      if (!a.ultimo_acesso) return 1
+      if (!b.ultimo_acesso) return -1
+      return new Date(b.ultimo_acesso).getTime() - new Date(a.ultimo_acesso).getTime()
+    })
     .filter((u: any) => {
       if (!setoresPermitidos) return true
       return u.setores.some((s: string) => (setoresPermitidos as string[]).includes(s))
