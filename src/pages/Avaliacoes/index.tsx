@@ -14,6 +14,38 @@ import type { Competencia } from '../../types'
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
 
+// Limite do lado do cliente para o PDF do relatório.
+// Deve acompanhar o file_size_limit do bucket "nutri-relatorios" no Supabase
+// (ver supabase/nutri_relatorios_limite.sql).
+const MAX_PDF_MB = 100
+
+// Traduz a falha de upload para uma mensagem que aponta o motivo real
+// (conexão, tamanho, sessão, formato) em vez do genérico "Load failed".
+function descreverErroUpload(err: unknown, tamMB: number): string {
+  const e = err as { message?: string; error?: string; statusCode?: string | number; status?: number }
+  const msg = (e?.message || e?.error || String(err ?? '')).toString()
+  const status = Number(e?.statusCode ?? e?.status ?? 0)
+  const lower = msg.toLowerCase()
+
+  // Falha de rede: Safari/iOS = "Load failed"; Chrome = "Failed to fetch"
+  if (lower.includes('load failed') || lower.includes('failed to fetch') || lower.includes('network')) {
+    return `Falha de conexão durante o envio (arquivo de ${tamMB.toFixed(1)} MB). Tente de novo, de preferência no Wi-Fi.`
+  }
+  // Tamanho excedido no servidor
+  if (status === 413 || lower.includes('maximum allowed size') || lower.includes('payload too large') || lower.includes('entity too large')) {
+    return `Arquivo grande demais para o servidor (${tamMB.toFixed(1)} MB). Reduza o PDF ou aumente o limite do bucket.`
+  }
+  // Sessão expirada / sem permissão
+  if (status === 401 || status === 403 || lower.includes('jwt') || lower.includes('unauthorized') || lower.includes('not authorized')) {
+    return 'Sessão expirada ou sem permissão. Saia e entre novamente e tente de novo.'
+  }
+  // Formato rejeitado pelo servidor
+  if (lower.includes('mime') || lower.includes('content type') || lower.includes('content-type')) {
+    return 'Formato não permitido pelo servidor. Envie um arquivo PDF.'
+  }
+  return `Motivo: ${msg || 'desconhecido'}${status ? ` (código ${status})` : ''}.`
+}
+
 function useNutriCounts(competencia: Competencia) {
   return useQuery({
     queryKey: ['nutri-counts', competencia.mes, competencia.ano],
@@ -239,13 +271,35 @@ function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competenci
   }
 
   async function handleUpload(avaliacaoId: string, file: File) {
+    // ── Validações locais: apontam o motivo antes mesmo de enviar ──
+    const tamMB = file.size / (1024 * 1024)
+    const ehPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (!ehPdf) {
+      alert(`Formato inválido: envie um arquivo PDF (o selecionado é "${file.type || file.name || 'desconhecido'}").`)
+      return
+    }
+    if (file.size === 0) {
+      alert('Arquivo vazio ou não baixado. Se o PDF está no iCloud, abra-o no app Arquivos primeiro e tente de novo.')
+      return
+    }
+    if (tamMB > MAX_PDF_MB) {
+      alert(`Arquivo muito grande: ${tamMB.toFixed(1)} MB. O limite é ${MAX_PDF_MB} MB. Comprima o PDF e tente novamente.`)
+      return
+    }
+
     setUploading(avaliacaoId)
     try {
       const path = `${avaliacaoId}.pdf`
-      const { error: uploadError } = await supabase.storage
-        .from('nutri-relatorios')
-        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
-      if (uploadError) { alert('Erro ao enviar arquivo: ' + uploadError.message); return }
+      let uploadError: unknown = null
+      try {
+        const resp = await supabase.storage
+          .from('nutri-relatorios')
+          .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+        uploadError = resp.error
+      } catch (e) {
+        uploadError = e
+      }
+      if (uploadError) { alert('Erro ao enviar arquivo. ' + descreverErroUpload(uploadError, tamMB)); return }
 
       const { data: { publicUrl } } = supabase.storage.from('nutri-relatorios').getPublicUrl(path)
 
@@ -255,7 +309,11 @@ function HistoricoNutriDB({ competencia, unidadeIds }: { competencia: Competenci
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ avaliacaoId, pdfUrl: publicUrl }),
       })
-      if (!res.ok) { alert('Erro ao salvar referência do PDF.'); return }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        alert('PDF enviado, mas falhou ao salvar a referência: ' + ((body as { error?: string }).error ?? `código ${res.status}`))
+        return
+      }
 
       queryClient.invalidateQueries({ queryKey: ['historico-nutri'] })
     } finally {
