@@ -73,8 +73,8 @@ const SETOR_COR: Record<string, string> = {
 
 const ROLE_LABEL: Record<string, string> = { rede: 'Líder', lider: 'Líder', leitura: 'Leitura' }
 const ROLE_COR: Record<string, string> = {
-  rede:    'bg-blue-100 text-blue-700',
-  lider:   'bg-blue-100 text-blue-700',
+  rede:    'bg-brand-100 text-brand-700',
+  lider:   'bg-brand-100 text-brand-700',
   leitura: 'bg-gray-100 text-gray-500',
 }
 
@@ -146,8 +146,8 @@ function ViewSimples() {
           {usuarios.map((u, idx) => {
             const acesso = formatUltimoAcesso(u.ultimo_acesso)
             const roleCls = u.ver_tudo
-              ? 'bg-purple-100 text-purple-700'
-              : u.role === 'leitura' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'
+              ? 'bg-gray-800 text-white'
+              : u.role === 'leitura' ? 'bg-gray-100 text-gray-500' : 'bg-brand-100 text-brand-700'
             const roleLabel = u.ver_tudo ? 'Admin' : u.role === 'leitura' ? 'Leitura' : 'Líder'
             return (
               <div key={u.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">

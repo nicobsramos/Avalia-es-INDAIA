@@ -4,14 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Paleta da marca: rampa preto → dourado (tema preto, cinza e dourado).
+        // Tons claros = dourado suave/creme; tons escuros = quase preto quente.
         brand: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: '#faf6ea',
+          100: '#f3e7c6',
+          200: '#e7d097',
+          300: '#d6b45a',
+          400: '#c79b2c',
+          500: '#b58a1d',
+          600: '#8a6912',
+          700: '#6b4f14',
+          800: '#2b2415',
+          900: '#15110a',
         },
       },
     },

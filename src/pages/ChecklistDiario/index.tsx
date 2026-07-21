@@ -19,8 +19,8 @@ const APENAS_HISTORICO = new Set([
 const TODAY = new Date().toISOString().split('T')[0]
 
 const TIPO_COR: Record<string, string> = {
-  abertura: 'bg-blue-100 text-blue-700',
-  fechamento: 'bg-purple-100 text-purple-700',
+  abertura: 'bg-brand-100 text-brand-700',
+  fechamento: 'bg-gray-200 text-gray-600',
 }
 
 const TIPO_LABEL: Record<string, string> = {

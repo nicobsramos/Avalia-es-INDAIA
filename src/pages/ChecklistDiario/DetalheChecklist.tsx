@@ -7,8 +7,8 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento' }
 const GESTORES_CHECKLIST = new Set(['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'])
 const TIPO_COR: Record<string, string> = {
-  abertura: 'bg-blue-100 text-blue-700',
-  fechamento: 'bg-purple-100 text-purple-700',
+  abertura: 'bg-brand-100 text-brand-700',
+  fechamento: 'bg-gray-200 text-gray-600',
 }
 
 function formatarData(iso: string) {

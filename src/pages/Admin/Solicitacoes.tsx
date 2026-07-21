@@ -50,8 +50,8 @@ function extractCidade(unitNome: string): string {
 
 const ROLE_LABEL: Record<string, string> = { rede: 'Líder', lider: 'Líder', leitura: 'Leitura' }
 const ROLE_COR: Record<string, string> = {
-  rede:    'bg-blue-100 text-blue-700',
-  lider:   'bg-blue-100 text-blue-700',
+  rede:    'bg-brand-100 text-brand-700',
+  lider:   'bg-brand-100 text-brand-700',
   leitura: 'bg-gray-100 text-gray-500',
 }
 

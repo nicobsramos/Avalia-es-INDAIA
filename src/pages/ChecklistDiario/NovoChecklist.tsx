@@ -261,8 +261,8 @@ export function NovoChecklist() {
                   className={`py-3 rounded-lg text-sm font-semibold border-2 transition-all ${
                     tipo === t
                       ? t === 'abertura'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-purple-600 text-white border-purple-600'
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-gray-700 text-white border-gray-700'
                       : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                   }`}
                 >
@@ -288,7 +288,7 @@ export function NovoChecklist() {
                     className={`py-3 rounded-lg text-sm font-semibold border-2 transition-all ${
                       eventoTipo === value
                         ? cor === 'blue'
-                          ? 'bg-blue-600 text-white border-blue-600'
+                          ? 'bg-brand-600 text-white border-brand-600'
                           : 'bg-green-600 text-white border-green-600'
                         : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                     }`}
@@ -394,7 +394,7 @@ export function NovoChecklist() {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 truncate text-sm">{nomeUnidade}</p>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-              tipo === 'abertura' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              tipo === 'abertura' ? 'bg-brand-100 text-brand-700' : 'bg-gray-200 text-gray-600'
             }`}>
               {TIPO_LABEL[tipo]}
             </span>

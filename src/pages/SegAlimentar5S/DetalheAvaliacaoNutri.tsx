@@ -212,8 +212,8 @@ export function DetalheAvaliacaoNutri() {
 
       {/* Relatório técnico */}
       {avaliacao.relatorio_tecnico && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <p className="text-xs font-semibold text-blue-700 mb-1">Relatório técnico</p>
+        <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+          <p className="text-xs font-semibold text-brand-700 mb-1">Relatório técnico</p>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{avaliacao.relatorio_tecnico}</p>
         </div>
       )}
