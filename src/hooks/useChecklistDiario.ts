@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export interface ChecklistCozinhaItem {
   id: string
-  tipo: 'abertura' | 'fechamento'
+  tipo: 'abertura' | 'fechamento' | 'pre_evento'
   secao: string
   descricao: string
   ordem: number
@@ -15,7 +15,7 @@ export interface ChecklistCozinha {
   id: string
   usuario_id: string
   unidade_id: string
-  tipo: 'abertura' | 'fechamento'
+  tipo: 'abertura' | 'fechamento' | 'pre_evento'
   data_operacao: string
   responsavel: string
   obs_gerais: string | null
@@ -78,7 +78,7 @@ function expandirSetores(setores: string[]): string[] {
   return [...setores.filter((s) => s !== 'Atendimento'), ...ATENDIMENTO_SETORES]
 }
 
-export function useChecklistItens(tipo: 'abertura' | 'fechamento', setoresFilter?: string[]) {
+export function useChecklistItens(tipo: 'abertura' | 'fechamento' | 'pre_evento', setoresFilter?: string[]) {
   return useQuery({
     queryKey: ['checklist-cozinha-itens', tipo, setoresFilter],
     queryFn: async (): Promise<ChecklistCozinhaItem[]> => {
@@ -168,7 +168,7 @@ export function useChecklistDetalhe(id: string | undefined) {
 
 export function useChecklistExistente(
   unidadeId: string | undefined,
-  tipo: 'abertura' | 'fechamento',
+  tipo: 'abertura' | 'fechamento' | 'pre_evento',
   data: string,
   setor?: string | null,
 ) {
@@ -237,7 +237,7 @@ export function useChecklistCompliance(unidadeIds?: string[] | null, setores?: s
       for (const c of checklists ?? []) {
         if (!counts[c.unidade_id]) counts[c.unidade_id] = { abertura: 0, fechamento: 0 }
         if (c.tipo === 'abertura') counts[c.unidade_id].abertura++
-        else counts[c.unidade_id].fechamento++
+        else if (c.tipo === 'fechamento') counts[c.unidade_id].fechamento++
       }
 
       return ((unidades ?? []) as { id: string; nome: string; dias_operacao_semana: number | null }[]).map((u) => ({
@@ -256,7 +256,7 @@ interface SalvarInput {
   id?: string
   usuario_id: string
   unidade_id: string
-  tipo: 'abertura' | 'fechamento'
+  tipo: 'abertura' | 'fechamento' | 'pre_evento'
   data_operacao: string
   responsavel: string
   obs_gerais: string

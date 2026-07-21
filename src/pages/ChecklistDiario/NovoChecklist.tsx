@@ -11,7 +11,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
-const TIPO_LABEL = { abertura: 'Abertura', fechamento: 'Fechamento' }
+const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento', pre_evento: 'Pré-evento' }
 
 interface ItemState {
   feito: boolean
@@ -25,13 +25,18 @@ function detectarTipoPadrao(): 'abertura' | 'fechamento' {
   return hora < 14 ? 'abertura' : 'fechamento'
 }
 
-function getJanela(tipo: 'abertura' | 'fechamento'): {
+function getJanela(tipo: 'abertura' | 'fechamento' | 'pre_evento'): {
   bloqueado: boolean
   dataOperacao: string
   mensagem: string
 } {
   const now = new Date()
   const hora = now.getHours()
+
+  if (tipo === 'pre_evento') {
+    // Pré-evento (dia de evento): sem restrição de horário
+    return { bloqueado: false, dataOperacao: now.toISOString().slice(0, 10), mensagem: '' }
+  }
 
   if (tipo === 'abertura') {
     // Abertura: aceita de 00h às 16h59; bloqueada das 17h às 23h59
@@ -68,8 +73,8 @@ export function NovoChecklist() {
 
   const [passo, setPasso] = useState<1 | 2>(1)
   const [unidadeId, setUnidadeId] = useState(params.get('unidade_id') ?? '')
-  const [tipo, setTipo] = useState<'abertura' | 'fechamento'>(
-    (params.get('tipo') as 'abertura' | 'fechamento') ?? detectarTipoPadrao(),
+  const [tipo, setTipo] = useState<'abertura' | 'fechamento' | 'pre_evento'>(
+    (params.get('tipo') as 'abertura' | 'fechamento' | 'pre_evento') ?? detectarTipoPadrao(),
   )
   const [responsavel, setResponsavel] = useState(perfil?.nome ?? '')
   const [itensState, setItensState] = useState<Record<string, ItemState>>({})
@@ -86,23 +91,32 @@ export function NovoChecklist() {
   const isGestor = verTudo || ['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'].includes(user?.email ?? '')
   const unidadeIds = verTudo ? null : (perfil?.unidades_ids ?? null)
 
+  const isAtendimento = checklistSetores.includes('Atendimento')
+  // Tipos disponíveis: Pré-evento (dia de evento) só para Atendimento
+  const tiposDisponiveis: Array<'abertura' | 'fechamento' | 'pre_evento'> = isAtendimento
+    ? ['abertura', 'fechamento', 'pre_evento']
+    : ['abertura', 'fechamento']
   // Atendimento abertura: usuário escolhe entre dia com/sem evento
-  const isAtendimentoAbertura = checklistSetores.includes('Atendimento') && tipo === 'abertura'
-  const effectiveSetor: string | null = isAtendimentoAbertura
-    ? (eventoTipo === 'evento' ? 'Atendimento - Evento' : eventoTipo === 'sem_evento' ? 'Atendimento - Sem Evento' : null)
-    : (checklistSetores[0] ?? null)
+  const isAtendimentoAbertura = isAtendimento && tipo === 'abertura'
+  const effectiveSetor: string | null = tipo === 'pre_evento'
+    ? 'Atendimento'
+    : isAtendimentoAbertura
+      ? (eventoTipo === 'evento' ? 'Atendimento - Evento' : eventoTipo === 'sem_evento' ? 'Atendimento - Sem Evento' : null)
+      : (checklistSetores[0] ?? null)
 
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds ?? undefined)
   // Para Atendimento abertura: [] enquanto sem escolha (retorna nada); setor específico após escolha
-  const itensFilter = isAtendimentoAbertura
-    ? (effectiveSetor ? [effectiveSetor] : [])
-    : (checklistSetores.length > 0 ? checklistSetores : undefined)
+  const itensFilter = tipo === 'pre_evento'
+    ? ['Atendimento']
+    : isAtendimentoAbertura
+      ? (effectiveSetor ? [effectiveSetor] : [])
+      : (checklistSetores.length > 0 ? checklistSetores : undefined)
   const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, itensFilter)
   const { data: existente, isLoading: loadExistente } = useChecklistExistente(
     unidadeId || undefined,
     tipo,
     dataOperacao,
-    checklistSetores[0] ?? null,
+    tipo === 'pre_evento' ? 'Atendimento' : (checklistSetores[0] ?? null),
   )
   const salvar = useSalvarChecklist()
 
@@ -252,17 +266,19 @@ export function NovoChecklist() {
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['abertura', 'fechamento'] as const).map((t) => (
+            <div className={`grid gap-2 ${tiposDisponiveis.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {tiposDisponiveis.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setTipo(t)}
-                  className={`py-3 rounded-lg text-sm font-semibold border-2 transition-all ${
+                  className={`py-3 rounded-lg text-xs sm:text-sm font-semibold border-2 transition-all ${
                     tipo === t
                       ? t === 'abertura'
                         ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-gray-700 text-white border-gray-700'
+                        : t === 'fechamento'
+                          ? 'bg-gray-700 text-white border-gray-700'
+                          : 'bg-green-600 text-white border-green-600'
                       : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                   }`}
                 >
@@ -394,7 +410,9 @@ export function NovoChecklist() {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 truncate text-sm">{nomeUnidade}</p>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-              tipo === 'abertura' ? 'bg-brand-100 text-brand-700' : 'bg-gray-200 text-gray-600'
+              tipo === 'abertura' ? 'bg-brand-100 text-brand-700'
+              : tipo === 'fechamento' ? 'bg-gray-200 text-gray-600'
+              : 'bg-green-100 text-green-700'
             }`}>
               {TIPO_LABEL[tipo]}
             </span>

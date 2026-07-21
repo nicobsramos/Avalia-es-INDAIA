@@ -4,11 +4,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useChecklistDetalhe, useChecklistItens, useDeleteChecklist } from '../../hooks/useChecklistDiario'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
-const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento' }
+const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento', pre_evento: 'Pré-evento' }
 const GESTORES_CHECKLIST = new Set(['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'])
 const TIPO_COR: Record<string, string> = {
   abertura: 'bg-brand-100 text-brand-700',
   fechamento: 'bg-gray-200 text-gray-600',
+  pre_evento: 'bg-green-100 text-green-700',
 }
 
 function formatarData(iso: string) {

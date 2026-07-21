@@ -21,11 +21,13 @@ const TODAY = new Date().toISOString().split('T')[0]
 const TIPO_COR: Record<string, string> = {
   abertura: 'bg-brand-100 text-brand-700',
   fechamento: 'bg-gray-200 text-gray-600',
+  pre_evento: 'bg-green-100 text-green-700',
 }
 
 const TIPO_LABEL: Record<string, string> = {
   abertura: 'Abertura',
   fechamento: 'Fechamento',
+  pre_evento: 'Pré-evento',
 }
 
 function formatarData(iso: string) {
@@ -54,6 +56,7 @@ function CardUnidadeHoje({
   podeApagar,
   podePreencher,
   onDelete,
+  mostrarPreEvento,
 }: {
   unidadeId: string
   unidadeNome: string
@@ -61,19 +64,21 @@ function CardUnidadeHoje({
   podeApagar: boolean
   podePreencher: boolean
   onDelete: (id: string) => void
+  mostrarPreEvento: boolean
 }) {
   const navigate = useNavigate()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
   const tiposFeitos = new Set(checklistsHoje.map((c) => c.tipo))
-  const aberturaDone = tiposFeitos.has('abertura')
-  const fechamentoDone = tiposFeitos.has('fechamento')
+  const tipos: Array<'abertura' | 'fechamento' | 'pre_evento'> = mostrarPreEvento
+    ? ['abertura', 'fechamento', 'pre_evento']
+    : ['abertura', 'fechamento']
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
       <h3 className="font-semibold text-gray-900 text-sm">{unidadeNome}</h3>
-      <div className="grid grid-cols-2 gap-2">
-        {(['abertura', 'fechamento'] as const).map((tipo) => {
-          const feito = tipo === 'abertura' ? aberturaDone : fechamentoDone
+      <div className={`grid gap-2 ${tipos.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {tipos.map((tipo) => {
+          const feito = tiposFeitos.has(tipo)
           const existente = checklistsHoje.find((c) => c.tipo === tipo)
           return (
             <div
@@ -199,6 +204,7 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
                 podeApagar={podeApagar}
                 podePreencher={podePreencher}
                 onDelete={handleDelete}
+                mostrarPreEvento={checklistSetores.includes('Atendimento')}
               />
             ))}
           </div>
