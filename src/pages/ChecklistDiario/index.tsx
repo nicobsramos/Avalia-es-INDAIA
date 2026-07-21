@@ -6,7 +6,7 @@ import { useUnidades } from '../../hooks/useChecklist'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
-const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com'])
+const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com', 'laisalves.indaia@gmail.com', 'k.guatelli.indaia@gmail.com', 'g.bueno.indaia@gmail.com'])
 
 // Usuários que só visualizam histórico — não preenchem checklists
 const APENAS_HISTORICO = new Set([

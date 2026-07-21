@@ -5,7 +5,7 @@ import { useChecklistDetalhe, useChecklistItens, useDeleteChecklist } from '../.
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 const TIPO_LABEL: Record<string, string> = { abertura: 'Abertura', fechamento: 'Fechamento', pre_evento: 'Pré-evento' }
-const GESTORES_CHECKLIST = new Set(['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'])
+const GESTORES_CHECKLIST = new Set(['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com', 'laisalves.indaia@gmail.com', 'k.guatelli.indaia@gmail.com', 'g.bueno.indaia@gmail.com'])
 const TIPO_COR: Record<string, string> = {
   abertura: 'bg-brand-100 text-brand-700',
   fechamento: 'bg-gray-200 text-gray-600',
