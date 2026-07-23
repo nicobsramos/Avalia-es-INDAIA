@@ -215,13 +215,15 @@ export function NovoChecklist() {
       if (msg.includes('duplicate key value violates unique constraint')) {
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: dup } = await (supabase as any)
+          let dupQuery = (supabase as any)
             .from('checklist_cozinha')
             .select('id')
             .eq('unidade_id', unidadeId)
             .eq('tipo', tipo)
             .eq('data_operacao', dataOperacao)
-            .maybeSingle()
+          // Filtra pelo setor para achar exatamente o conflito (não o de outro setor)
+          if (effectiveSetor) dupQuery = dupQuery.eq('setor', effectiveSetor)
+          const { data: dup } = await dupQuery.maybeSingle()
           if (dup?.id) { navigate(`/checklist-diario/${dup.id}`); return }
         } catch { /* ignora e mostra mensagem amigável abaixo */ }
         setErro('Este checklist já foi preenchido para esta data. Volte ao início para visualizá-lo.')
