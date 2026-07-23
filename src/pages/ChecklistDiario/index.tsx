@@ -171,20 +171,7 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
-        {podePreencher && (
-          <button
-            onClick={() => navigate('/checklist-diario/novo')}
-            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Novo
-          </button>
-        )}
-      </div>
+      <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
 
       {/* Status de hoje por unidade */}
       <section>
@@ -288,7 +275,6 @@ function ViewLider({ checklistSetores }: { checklistSetores: string[] }) {
 }
 
 function ViewRede({ setores }: { setores?: string[] | null }) {
-  const navigate = useNavigate()
   const { user, perfil } = useAuth()
   const { data: compliance, isLoading, error } = useChecklistCompliance(undefined, setores)
   const { data: lista, isLoading: loadLista } = useChecklistList()
@@ -303,7 +289,6 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
   )
 
   const podeApagar = perfil?.ver_tudo === true || GESTORES_CHECKLIST.has(user?.email ?? '')
-  const podePreencher = !APENAS_HISTORICO.has(user?.email ?? '')
   const historico = (lista ?? []).slice(0, 50)
 
   async function handleDelete(id: string) {
@@ -313,20 +298,7 @@ function ViewRede({ setores }: { setores?: string[] | null }) {
 
   return (
     <div className="px-4 py-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
-        {podePreencher && (
-          <button
-            onClick={() => navigate('/checklist-diario/novo')}
-            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Novo
-          </button>
-        )}
-      </div>
+      <h2 className="text-xl font-bold text-gray-900">Checklist Diário</h2>
 
       {/* Compliance da semana */}
       <section>
