@@ -1,5 +1,5 @@
 -- ============================================================
--- CORREÇÃO PONTUAL — reclassificar 2 avaliações antigas
+-- CORREÇÃO PONTUAL — reclassificar 3 avaliações antigas
 --
 -- Essas avaliações foram feitas no formato antigo (tudo no setor
 -- "Atendimento"). Reatribui as respostas para os setores atuais,
@@ -7,7 +7,11 @@
 --   • "Auditoria operacional do evento"  ->  "Atendimento - Maitres"
 --   • "Pré-evento"                        ->  "Atendimento - Pré evento"
 --
--- Escopo: SOMENTE as 2 avaliações abaixo. Não afeta mais nada.
+-- Avaliações:
+--   b5e71d9d… e 9784714a…  (as 2 primeiras, do pedido inicial)
+--   80ee02c3…              (Floripa – Mirante, visita 26/06 → competência Jul/2026)
+--
+-- Escopo: SOMENTE as 3 avaliações abaixo. Não afeta mais nada.
 -- Rodar no SQL Editor do Supabase (rode o passo 1, confira, depois 2 e 3).
 -- Idempotente: pode rodar de novo sem efeito extra.
 -- ============================================================
@@ -21,7 +25,8 @@ JOIN checklist_itens ci ON ci.id = ar.item_id
 JOIN setores s          ON s.id = ar.setor_id
 WHERE ar.avaliacao_id IN (
   'b5e71d9d-d8f2-42f7-8656-182fd637f4a8',
-  '9784714a-0d8a-490b-8041-d6fb49ad2a82'
+  '9784714a-0d8a-490b-8041-d6fb49ad2a82',
+  '80ee02c3-3b6b-460e-8854-3be16909e38b'
 )
 GROUP BY ar.avaliacao_id, ci.secao, s.nome
 ORDER BY ar.avaliacao_id, ci.secao;
@@ -35,7 +40,8 @@ WHERE ci.id = ar.item_id
   AND alvo.nome = 'Atendimento - Maitres'
   AND ar.avaliacao_id IN (
     'b5e71d9d-d8f2-42f7-8656-182fd637f4a8',
-    '9784714a-0d8a-490b-8041-d6fb49ad2a82'
+    '9784714a-0d8a-490b-8041-d6fb49ad2a82',
+    '80ee02c3-3b6b-460e-8854-3be16909e38b'
   )
   AND ci.secao ILIKE 'Auditoria operacional%'
   AND ar.setor_id <> alvo.id;
@@ -48,7 +54,8 @@ WHERE ci.id = ar.item_id
   AND alvo.nome = 'Atendimento - Pré evento'
   AND ar.avaliacao_id IN (
     'b5e71d9d-d8f2-42f7-8656-182fd637f4a8',
-    '9784714a-0d8a-490b-8041-d6fb49ad2a82'
+    '9784714a-0d8a-490b-8041-d6fb49ad2a82',
+    '80ee02c3-3b6b-460e-8854-3be16909e38b'
   )
   AND ci.secao ILIKE 'Pr%evento'
   AND ar.setor_id <> alvo.id;
@@ -62,7 +69,8 @@ JOIN checklist_itens ci ON ci.id = ar.item_id
 JOIN setores s          ON s.id = ar.setor_id
 WHERE ar.avaliacao_id IN (
   'b5e71d9d-d8f2-42f7-8656-182fd637f4a8',
-  '9784714a-0d8a-490b-8041-d6fb49ad2a82'
+  '9784714a-0d8a-490b-8041-d6fb49ad2a82',
+  '80ee02c3-3b6b-460e-8854-3be16909e38b'
 )
 GROUP BY ar.avaliacao_id, s.nome, ci.secao
 ORDER BY ar.avaliacao_id, s.nome;

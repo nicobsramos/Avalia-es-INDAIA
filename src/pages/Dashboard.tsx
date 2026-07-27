@@ -46,6 +46,14 @@ function extractCidade(nome: string): string {
   return nome.split(' – ')[0].trim()
 }
 
+// Setores antigos substituídos pelos granulares (Bar → Dia de Evento/Pré Preparo/
+// Checklist Semanal; Atendimento → Maitres/Chk. Maitres/Pré Evento). Ficam sempre
+// "—" hoje, então some do card quando não têm nota (se tiverem dado histórico, aparecem).
+const SETORES_LEGADOS = new Set(['Bar', 'Atendimento'])
+function ocultarSetor(nome: string, nota: number | null): boolean {
+  return SETORES_LEGADOS.has(nome) && nota === null
+}
+
 function corCheck(count: number, esperado: number): string {
   if (count >= esperado) return 'text-green-600'
   if (count > 0) return 'text-yellow-600'
@@ -153,7 +161,9 @@ export function Dashboard() {
   const unidadesDash = useMemo<UnidadeDashItem[]>(() => {
     return notasUnidades
       .map((nu) => {
-        const setoresVisiveis = nu.notas_setores.filter((ns) => isSectorVisible(ns.setor_nome, setoresDashEff))
+        const setoresVisiveis = nu.notas_setores.filter(
+          (ns) => isSectorVisible(ns.setor_nome, setoresDashEff) && !ocultarSetor(ns.setor_nome, ns.nota),
+        )
         const nutriUnit = (dbNutri ?? []).find((d) => d.unidade_id === nu.unidade_id)
         const checkUnit = (compliance ?? []).find((c) => c.unidade_id === nu.unidade_id)
 
