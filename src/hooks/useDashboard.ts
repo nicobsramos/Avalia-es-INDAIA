@@ -43,13 +43,23 @@ async function fetchDashboardData(c: Competencia, unidadeIds?: string[] | null) 
 
   const avaliacaoIds = avs.map((a) => a.id)
 
-  let respostas: RespostaRow[] = []
+  const respostas: RespostaRow[] = []
   if (avaliacaoIds.length > 0) {
-    const { data } = await supabase
-      .from('avaliacao_respostas')
-      .select('setor_id, valor, avaliacao_id')
-      .in('avaliacao_id', avaliacaoIds)
-    respostas = (data as unknown as RespostaRow[]) ?? []
+    // Busca paginada: o PostgREST limita ~1000 linhas por request; sem isso, à
+    // medida que a competência cresce, as respostas mais recentes eram cortadas.
+    const PAGE = 1000
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('avaliacao_respostas')
+        .select('setor_id, valor, avaliacao_id')
+        .in('avaliacao_id', avaliacaoIds)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error) throw error
+      const rows = (data as unknown as RespostaRow[]) ?? []
+      respostas.push(...rows)
+      if (rows.length < PAGE) break
+    }
   }
 
   const notasUnidades: NotaUnidade[] = us.map((u) => {

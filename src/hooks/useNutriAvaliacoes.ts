@@ -112,14 +112,23 @@ export function useNutriReport(competencia: Competencia, unidadeIds?: string[] |
       const avs = avaliacoes as unknown as AvRow[]
       const avIds = avs.map((a) => a.id)
 
-      const { data: respostas, error: rsErr } = await supabase
-        .from('nutri_respostas')
-        .select('avaliacao_id, valor, nutri_itens(area)')
-        .in('avaliacao_id', avIds)
-      if (rsErr) throw rsErr
-
       type RsRow = { avaliacao_id: string; valor: string; nutri_itens: { area: string } | null }
-      const rs = (respostas ?? []) as unknown as RsRow[]
+      // Busca paginada: o PostgREST limita ~1000 linhas por request e o volume de
+      // respostas nutri passa disso — sem paginar, a unidade mais recente sumia.
+      const PAGE = 1000
+      const rs: RsRow[] = []
+      for (let from = 0; ; from += PAGE) {
+        const { data: pageData, error: rsErr } = await supabase
+          .from('nutri_respostas')
+          .select('avaliacao_id, valor, nutri_itens(area)')
+          .in('avaliacao_id', avIds)
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (rsErr) throw rsErr
+        const rows = (pageData ?? []) as unknown as RsRow[]
+        rs.push(...rows)
+        if (rows.length < PAGE) break
+      }
 
       // map avaliacao_id → unidade_id
       const avToUnidade: Record<string, string> = {}
