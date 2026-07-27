@@ -115,9 +115,11 @@ export function useNutriReport(competencia: Competencia, unidadeIds?: string[] |
       type RsRow = { avaliacao_id: string; valor: string; nutri_itens: { area: string } | null }
       // Busca paginada: o PostgREST limita ~1000 linhas por request e o volume de
       // respostas nutri passa disso — sem paginar, a unidade mais recente sumia.
+      // Avança pela quantidade realmente retornada e para só na página vazia —
+      // robusto para qualquer limite de linhas do PostgREST (não assume 1000).
       const PAGE = 1000
       const rs: RsRow[] = []
-      for (let from = 0; ; from += PAGE) {
+      for (let from = 0; ; ) {
         const { data: pageData, error: rsErr } = await supabase
           .from('nutri_respostas')
           .select('avaliacao_id, valor, nutri_itens(area)')
@@ -126,8 +128,9 @@ export function useNutriReport(competencia: Competencia, unidadeIds?: string[] |
           .range(from, from + PAGE - 1)
         if (rsErr) throw rsErr
         const rows = (pageData ?? []) as unknown as RsRow[]
+        if (rows.length === 0) break
         rs.push(...rows)
-        if (rows.length < PAGE) break
+        from += rows.length
       }
 
       // map avaliacao_id → unidade_id

@@ -47,8 +47,10 @@ async function fetchDashboardData(c: Competencia, unidadeIds?: string[] | null) 
   if (avaliacaoIds.length > 0) {
     // Busca paginada: o PostgREST limita ~1000 linhas por request; sem isso, à
     // medida que a competência cresce, as respostas mais recentes eram cortadas.
+    // Avança pela quantidade realmente retornada e para só na página vazia —
+    // robusto para qualquer limite de linhas do PostgREST (não assume 1000).
     const PAGE = 1000
-    for (let from = 0; ; from += PAGE) {
+    for (let from = 0; ; ) {
       const { data, error } = await supabase
         .from('avaliacao_respostas')
         .select('setor_id, valor, avaliacao_id')
@@ -57,8 +59,9 @@ async function fetchDashboardData(c: Competencia, unidadeIds?: string[] | null) 
         .range(from, from + PAGE - 1)
       if (error) throw error
       const rows = (data as unknown as RespostaRow[]) ?? []
+      if (rows.length === 0) break
       respostas.push(...rows)
-      if (rows.length < PAGE) break
+      from += rows.length
     }
   }
 
