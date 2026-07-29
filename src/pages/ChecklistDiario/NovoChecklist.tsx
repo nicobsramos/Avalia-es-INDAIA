@@ -25,46 +25,16 @@ function detectarTipoPadrao(): 'abertura' | 'fechamento' {
   return hora < 14 ? 'abertura' : 'fechamento'
 }
 
-function getJanela(tipo: 'abertura' | 'fechamento' | 'pre_evento'): {
-  bloqueado: boolean
-  dataOperacao: string
-  mensagem: string
-} {
-  const now = new Date()
-  const hora = now.getHours()
-
-  if (tipo === 'pre_evento') {
-    // Pré-evento (dia de evento): sem restrição de horário
-    return { bloqueado: false, dataOperacao: now.toISOString().slice(0, 10), mensagem: '' }
-  }
-
-  if (tipo === 'abertura') {
-    // Abertura: aceita de 00h às 16h59; bloqueada das 17h às 23h59
-    const bloqueado = hora >= 17
-    return {
-      bloqueado,
-      dataOperacao: now.toISOString().slice(0, 10),
-      mensagem: 'Horário encerrado para abertura. O prazo vai de 00h às 17h.',
-    }
-  }
-
-  // Fechamento: aceita das 16h às 03h59 do dia seguinte
-  // Na madrugada (00h–03h59) a competência é o dia anterior
-  const bloqueado = hora >= 4 && hora < 16
-  let dataOp: string
-  if (hora < 4) {
-    const ontem = new Date(now)
-    ontem.setDate(ontem.getDate() - 1)
-    dataOp = ontem.toISOString().slice(0, 10)
-  } else {
-    dataOp = now.toISOString().slice(0, 10)
-  }
-  return {
-    bloqueado,
-    dataOperacao: dataOp,
-    mensagem: 'Horário encerrado para fechamento. O prazo vai das 16h às 04h do dia seguinte.',
-  }
+// Data local (não-UTC) no formato YYYY-MM-DD; offsetDias=-1 = ontem
+function isoLocal(offsetDias = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDias)
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
 }
+const hojeISO = () => isoLocal(0)
+const ontemISO = () => isoLocal(-1)
 
 export function NovoChecklist() {
   const navigate = useNavigate()
@@ -82,9 +52,8 @@ export function NovoChecklist() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [eventoTipo, setEventoTipo] = useState<'evento' | 'sem_evento' | null>(null)
-
-  const janela = getJanela(tipo)
-  const dataOperacao = janela.dataOperacao
+  // Data de operação livre — padrão hoje, editável (pode escolher o dia anterior)
+  const [dataOperacao, setDataOperacao] = useState(hojeISO)
 
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const verTudo = perfil?.ver_tudo === true
@@ -179,7 +148,10 @@ export function NovoChecklist() {
   async function handleSalvar(e: FormEvent) {
     e.preventDefault()
     if (!unidadeId || !user) return
-    if (janela.bloqueado) { setErro(janela.mensagem); return }
+    if (dataOperacao < ontemISO() || dataOperacao > hojeISO()) {
+      setErro('A data de operação deve ser hoje ou ontem.')
+      return
+    }
     setErro('')
     setSalvando(true)
 
@@ -335,21 +307,19 @@ export function NovoChecklist() {
             </div>
           )}
 
-          {/* Data de operação (calculada automaticamente pelo horário) */}
+          {/* Data de operação — apenas hoje ou ontem */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data de operação</label>
-            <div className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm bg-gray-50 text-gray-500">
-              {dataOperacao.split('-').reverse().join('/')}
-            </div>
+            <input
+              type="date"
+              value={dataOperacao}
+              min={ontemISO()}
+              max={hojeISO()}
+              onChange={(e) => setDataOperacao(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Só é possível escolher hoje ou ontem.</p>
           </div>
-
-          {/* Aviso de horário bloqueado */}
-          {janela.bloqueado && (
-            <div className="rounded-lg p-3 bg-red-50 border border-red-200 text-red-700 text-sm space-y-0.5">
-              <p className="font-semibold">Fora do horário permitido</p>
-              <p>{janela.mensagem}</p>
-            </div>
-          )}
 
           {/* Responsável */}
           <div>
@@ -388,7 +358,7 @@ export function NovoChecklist() {
         </div>
 
         <button
-          disabled={!unidadeId || !responsavel.trim() || loadExistente || (isAtendimentoAbertura && !eventoTipo) || (!!existente && !podeEditar) || janela.bloqueado}
+          disabled={!unidadeId || !responsavel.trim() || loadExistente || (isAtendimentoAbertura && !eventoTipo) || (!!existente && !podeEditar)}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
