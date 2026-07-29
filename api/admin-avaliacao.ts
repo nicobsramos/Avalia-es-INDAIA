@@ -17,6 +17,7 @@ const ALLOWED_OP   = ['data_visita', 'competencia_mes', 'competencia_ano', 'resp
 const ALLOWED_NUTRI = [
   'data_visita', 'competencia_mes', 'competencia_ano',
   'lideres_presentes', 'obs_cozinha', 'obs_bar', 'obs_atendimento', 'relatorio_tecnico',
+  'respostas',
 ]
 
 export default async function handler(req: any, res: any) {
@@ -89,6 +90,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (tipo === 'operacional' && Array.isArray(respostas)) {
+      // Operacional: atualiza in-place (preserva o setor_id de cada resposta).
       for (const r of respostas as { item_id: string; valor: number; observacao: string }[]) {
         if (!r.item_id || !r.valor) continue
         await (admin as any)
@@ -96,6 +98,32 @@ export default async function handler(req: any, res: any) {
           .update({ valor: r.valor, observacao: r.observacao || null })
           .eq('avaliacao_id', id)
           .eq('item_id', r.item_id)
+      }
+    }
+
+    if (tipo === 'nutri' && Array.isArray(respostas)) {
+      // Nutri: substitui o conjunto (não há setor_id; recriar cobre itens
+      // editados, adicionados e removidos). Só apaga se houver o que reinserir.
+      const rows = (respostas as { item_id: string; valor: string; observacao?: string }[])
+        .filter((r) => r.item_id && r.valor)
+        .map((r) => ({ avaliacao_id: id, item_id: r.item_id, valor: r.valor, observacao: r.observacao || null }))
+      if (rows.length > 0) {
+        // Snapshot para rollback caso o insert falhe (ex.: valor fora do CHECK) —
+        // assim a Julia nunca perde as respostas por uma falha na gravação.
+        const { data: originais } = await (admin as any)
+          .from(tabelaRespostas).select('item_id, valor, observacao').eq('avaliacao_id', id)
+        await (admin as any).from(tabelaRespostas).delete().eq('avaliacao_id', id)
+        const { error } = await (admin as any).from(tabelaRespostas).insert(rows)
+        if (error) {
+          if (Array.isArray(originais) && originais.length > 0) {
+            await (admin as any).from(tabelaRespostas).insert(
+              (originais as { item_id: string; valor: string; observacao: string | null }[]).map((o) => ({
+                avaliacao_id: id, item_id: o.item_id, valor: o.valor, observacao: o.observacao ?? null,
+              })),
+            )
+          }
+          return res.status(500).json({ error: error.message })
+        }
       }
     }
 

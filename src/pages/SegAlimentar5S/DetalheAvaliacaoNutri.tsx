@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNutriDetalhe } from '../../hooks/useNutriAvaliacoes'
+import { useNutriDetalhe, useNutriItens, type ValorNutri } from '../../hooks/useNutriAvaliacoes'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -9,6 +9,13 @@ import { ColoredScore } from '../../components/ColoredScore'
 import { bgCorClasse, formatarDataBR, formatarMesAno } from '../../utils/notas'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
+const AREAS = ['Cozinha', 'Bar', 'Atendimento'] as const
+type Area = typeof AREAS[number]
+const OBS_CAMPO: Record<Area, 'obs_cozinha' | 'obs_bar' | 'obs_atendimento'> = {
+  Cozinha: 'obs_cozinha',
+  Bar: 'obs_bar',
+  Atendimento: 'obs_atendimento',
+}
 
 const VALOR_LABEL: Record<string, string> = {
   Conforme:      'Atende',
@@ -22,6 +29,19 @@ const VALOR_BADGE: Record<string, string> = {
   Parcial:       'bg-orange-100 text-orange-700',
   Nao_Aplicavel: 'bg-gray-100 text-gray-500',
 }
+// Cores dos botões no modo de edição
+const COR_VALOR: Record<ValorNutri, string> = {
+  Conforme:      'bg-green-500 text-white border-green-500',
+  Nao_Conforme:  'bg-red-500 text-white border-red-500',
+  Parcial:       'bg-orange-400 text-white border-orange-400',
+  Nao_Aplicavel: 'bg-gray-400 text-white border-gray-400',
+}
+const COR_INATIVO = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+
+interface RespEdit {
+  valor: ValorNutri | null
+  observacao: string
+}
 
 async function getToken() {
   const { data } = await supabase.auth.getSession()
@@ -31,6 +51,7 @@ async function getToken() {
 export function DetalheAvaliacaoNutri() {
   const { id } = useParams<{ id: string }>()
   const { data, isLoading, error } = useNutriDetalhe(id ?? '')
+  const { data: todosItens } = useNutriItens()
   const { user } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -49,6 +70,7 @@ export function DetalheAvaliacaoNutri() {
     obs_atendimento: '',
     relatorio_tecnico: '',
   })
+  const [editRespostas, setEditRespostas] = useState<Record<string, RespEdit>>({})
 
   if (isLoading) return <LoadingSpinner text="Carregando avaliação..." />
   if (error || !data) {
@@ -70,6 +92,9 @@ export function DetalheAvaliacaoNutri() {
     Atendimento: avaliacao.obs_atendimento,
   }
 
+  const isOwner = !!user && avaliacao.usuario_id === user.id
+  const canEdit = isAdmin || isOwner
+
   function abrirEdicao() {
     setEditForm({
       data_visita: avaliacao.data_visita,
@@ -81,7 +106,28 @@ export function DetalheAvaliacaoNutri() {
       obs_atendimento: avaliacao.obs_atendimento ?? '',
       relatorio_tecnico: avaliacao.relatorio_tecnico ?? '',
     })
+    // Inicializa a partir das respostas existentes (garante não perder nada,
+    // mesmo se a lista completa de itens ainda não tiver carregado)
+    const er: Record<string, RespEdit> = {}
+    for (const r of respostas) {
+      er[r.item_id] = { valor: r.valor as ValorNutri, observacao: r.observacao ?? '' }
+    }
+    setEditRespostas(er)
     setEditando(true)
+  }
+
+  function setValorEdit(itemId: string, valor: ValorNutri) {
+    setEditRespostas((prev) => ({
+      ...prev,
+      [itemId]: { valor, observacao: prev[itemId]?.observacao ?? '' },
+    }))
+  }
+
+  function setObsEdit(itemId: string, observacao: string) {
+    setEditRespostas((prev) => ({
+      ...prev,
+      [itemId]: { valor: prev[itemId]?.valor ?? null, observacao },
+    }))
   }
 
   async function handleDelete() {
@@ -103,17 +149,38 @@ export function DetalheAvaliacaoNutri() {
   }
 
   async function handleSave() {
+    const respondidas = Object.entries(editRespostas).filter(([, v]) => v.valor != null)
+    if (respondidas.length === 0) {
+      alert('Responda pelo menos um item antes de salvar.')
+      return
+    }
+    const semObs = respondidas.filter(([, v]) => v.valor !== 'Conforme' && !v.observacao.trim())
+    if (semObs.length > 0) {
+      alert(`Preencha a observação dos itens "Não atende", "Parcial" ou "N/A" (${semObs.length} pendente${semObs.length > 1 ? 's' : ''}).`)
+      return
+    }
+
     setSalvando(true)
     try {
+      const respostasPayload = respondidas.map(([item_id, v]) => ({
+        item_id,
+        valor: v.valor,
+        observacao: v.observacao,
+      }))
       const token = await getToken()
       const res = await fetch(`/api/admin-avaliacao?id=${avaliacao.id}&tipo=nutri`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, respostas: respostasPayload }),
       })
-      if (!res.ok) { alert('Erro ao salvar.'); return }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        alert('Erro ao salvar: ' + ((body as { error?: string }).error ?? `código ${res.status}`))
+        return
+      }
       qc.invalidateQueries({ queryKey: ['nutri-detalhe', avaliacao.id] })
       qc.invalidateQueries({ queryKey: ['nutri-avaliacoes'] })
+      qc.invalidateQueries({ queryKey: ['nutri-report'] })
       setEditando(false)
       navigate(0)
     } finally {
@@ -124,6 +191,148 @@ export function DetalheAvaliacaoNutri() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setEditForm((f) => ({ ...f, [k]: e.target.value }))
 
+  // ── MODO EDIÇÃO ──────────────────────────────────────────────────────────────
+  if (editando) {
+    return (
+      <div className="pb-28">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+          <button type="button" onClick={() => setEditando(false)} className="text-gray-400 hover:text-gray-600 p-1 shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">{avaliacao.unidade_nome}</p>
+            <p className="text-xs text-gray-400">Editando avaliação</p>
+          </div>
+        </div>
+
+        <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
+          {/* Dados gerais */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Dados gerais</p>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Data da visita</label>
+              <input type="date" value={editForm.data_visita} onChange={set('data_visita')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Mês competência</label>
+                <input type="number" min={1} max={12} value={editForm.competencia_mes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, competencia_mes: Number(e.target.value) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Ano competência</label>
+                <input type="number" value={editForm.competencia_ano}
+                  onChange={(e) => setEditForm((f) => ({ ...f, competencia_ano: Number(e.target.value) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Líderes presentes</label>
+              <input type="text" value={editForm.lideres_presentes} onChange={set('lideres_presentes')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+
+          {/* Itens por área */}
+          {AREAS.map((area) => (
+            <section key={area}>
+              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                {area}
+                <span className="text-xs text-gray-400 font-normal ml-auto">{(todosItens?.[area] ?? []).length} itens</span>
+              </h3>
+
+              <div className="space-y-3">
+                {(todosItens?.[area] ?? []).map((item) => {
+                  const st = editRespostas[item.id]
+                  return (
+                    <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                      <p className="text-sm text-gray-800 leading-snug">{item.descricao}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['Conforme', 'Nao_Conforme', 'Parcial', 'Nao_Aplicavel'] as ValorNutri[]).map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setValorEdit(item.id, v)}
+                            className={`py-3 rounded-lg text-xs font-bold border-2 transition-all min-h-[44px] leading-tight px-1 ${
+                              st?.valor === v ? COR_VALOR[v] : COR_INATIVO
+                            }`}
+                          >
+                            {VALOR_LABEL[v]}
+                          </button>
+                        ))}
+                      </div>
+
+                      {st?.valor != null && st.valor !== 'Conforme' ? (
+                        <div>
+                          <p className="text-xs font-medium text-red-500 mb-1.5">Observação obrigatória *</p>
+                          <textarea
+                            value={st.observacao}
+                            onChange={(e) => setObsEdit(item.id, e.target.value)}
+                            placeholder="Descreva o que foi observado..."
+                            rows={2}
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none ${
+                              !st.observacao.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                          />
+                        </div>
+                      ) : (
+                        <textarea
+                          value={st?.observacao ?? ''}
+                          onChange={(e) => setObsEdit(item.id, e.target.value)}
+                          placeholder="Observação (opcional)"
+                          rows={2}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Observação geral da área */}
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Observações gerais — {area}</label>
+                <textarea
+                  value={editForm[OBS_CAMPO[area]]}
+                  onChange={set(OBS_CAMPO[area])}
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                />
+              </div>
+            </section>
+          ))}
+
+          {/* Relatório técnico */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Relatório técnico da visita</label>
+            <textarea value={editForm.relatorio_tecnico} onChange={set('relatorio_tecnico')} rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none" />
+          </div>
+        </div>
+
+        {/* Barra fixa */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-10">
+          <div className="max-w-lg mx-auto flex gap-3">
+            <button type="button" onClick={() => setEditando(false)}
+              className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors">
+              Cancelar
+            </button>
+            <button type="button" disabled={salvando} onClick={handleSave}
+              className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white text-sm font-bold py-3 rounded-xl transition-colors">
+              {salvando ? 'Salvando…' : 'Salvar alterações'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MODO LEITURA ─────────────────────────────────────────────────────────────
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
       <div className="flex items-center gap-3">
@@ -218,85 +427,28 @@ export function DetalheAvaliacaoNutri() {
         </div>
       )}
 
-      {/* Ações admin */}
-      {isAdmin && (
-        <div className="border border-red-200 rounded-xl p-4 bg-red-50 space-y-3">
-          <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Ações administrativas</p>
+      {/* Ações */}
+      {canEdit && (
+        <div className={`border rounded-xl p-4 space-y-3 ${isAdmin ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wide ${isAdmin ? 'text-red-700' : 'text-gray-500'}`}>
+            {isAdmin ? 'Ações administrativas' : 'Editar avaliação'}
+          </p>
           <div className="flex gap-3">
             <button
               onClick={abrirEdicao}
               className="flex-1 bg-white border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Editar
+              Editar respostas
             </button>
-            <button
-              disabled={deletando}
-              onClick={handleDelete}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
-            >
-              {deletando ? 'Excluindo…' : 'Excluir'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de edição */}
-      {editando && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-gray-900">Editar avaliação</h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Data da visita</label>
-                <input type="date" value={editForm.data_visita} onChange={set('data_visita')}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Mês competência</label>
-                  <input type="number" min={1} max={12} value={editForm.competencia_mes}
-                    onChange={(e) => setEditForm((f) => ({ ...f, competencia_mes: Number(e.target.value) }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Ano competência</label>
-                  <input type="number" value={editForm.competencia_ano}
-                    onChange={(e) => setEditForm((f) => ({ ...f, competencia_ano: Number(e.target.value) }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Líderes presentes</label>
-                <input type="text" value={editForm.lideres_presentes} onChange={set('lideres_presentes')}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              </div>
-              {(['obs_cozinha', 'obs_bar', 'obs_atendimento'] as const).map((campo) => (
-                <div key={campo}>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block capitalize">
-                    Obs. {campo.replace('obs_', '')}
-                  </label>
-                  <textarea rows={2} value={editForm[campo]} onChange={set(campo)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none" />
-                </div>
-              ))}
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Relatório técnico</label>
-                <textarea rows={3} value={editForm.relatorio_tecnico} onChange={set('relatorio_tecnico')}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none" />
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => setEditando(false)}
-                className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-50">
-                Cancelar
+            {isAdmin && (
+              <button
+                disabled={deletando}
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+              >
+                {deletando ? 'Excluindo…' : 'Excluir'}
               </button>
-              <button disabled={salvando} onClick={handleSave}
-                className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors">
-                {salvando ? 'Salvando…' : 'Salvar'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
