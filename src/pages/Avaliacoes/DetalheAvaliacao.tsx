@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { ColoredScore } from '../../components/ColoredScore'
 import { formatarDataBR, formatarMesAno, bgCorClasse } from '../../utils/notas'
+import { rotuloComGrupo } from '../../utils/funcoes'
 import type { ItemDetalhe } from '../../hooks/useAvaliacoes'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
@@ -239,7 +240,7 @@ export function DetalheAvaliacao() {
               <div key={setor.id} className="space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
-                  {setor.rotulo}
+                  {rotuloComGrupo(setor.nome, setor.rotulo)}
                 </p>
                 {secoes.map(({ secao, itens: secItens }) => (
                   <div key={secao} className="space-y-2">
@@ -362,7 +363,7 @@ export function DetalheAvaliacao() {
       <div className={`grid gap-2 ${notasPorSetor.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}>
         {notasPorSetor.map(({ setor, nota }) => (
           <div key={setor.id} className={`rounded-xl border p-3 text-center ${bgCorClasse(nota)}`}>
-            <p className="text-xs text-gray-500 mb-1">{setor.rotulo}</p>
+            <p className="text-xs text-gray-500 mb-1">{rotuloComGrupo(setor.nome, setor.rotulo)}</p>
             <ColoredScore nota={nota} size="md" />
           </div>
         ))}
@@ -377,7 +378,7 @@ export function DetalheAvaliacao() {
           <div key={setor.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className={`flex items-center justify-between px-4 py-3 border-b ${bgCorClasse(nota)}`}>
               <div>
-                <h3 className="font-semibold text-gray-900">{setor.rotulo}</h3>
+                <h3 className="font-semibold text-gray-900">{rotuloComGrupo(setor.nome, setor.rotulo)}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {itens.length} itens avaliados
                   {naoAtende > 0 && <span className="text-red-600 font-medium"> · {naoAtende} não atende</span>}

@@ -8,8 +8,10 @@ import { useAuth } from '../../context/AuthContext'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { corClasse, formatarNota, formatarCompetencia, competenciaAtual } from '../../utils/notas'
 import { DB_TO_SHEET, metaOperacional, metaNutri, metaSetorOp } from '../../utils/unidades'
+import { ordemFuncao, rotuloComGrupo, resumoFuncoesRede } from '../../utils/funcoes'
+import { ResumoFuncoes } from '../../components/ResumoFuncoes'
 import { useCompetenciasDisponiveis } from '../../hooks/useCompetenciasDisponiveis'
-import type { Competencia } from '../../types'
+import type { Competencia, NotaSetor } from '../../types'
 
 const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const JULIA_EMAIL = 'nutrijuliamafra@gmail.com'
@@ -183,7 +185,7 @@ function HistoricoOp({ competencia, unidadeIds, setoresPermitidos }: { competenc
               <span className="text-sm font-semibold text-gray-800 truncate">{av.unidades?.nome ?? '—'}</span>
               {setores.length > 0 && (
                 <span className="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-full">
-                  {setores.map((s) => s.rotulo).join(' · ')}
+                  {setores.map((s) => rotuloComGrupo(s.nome, s.rotulo)).join(' + ')}
                 </span>
               )}
             </Link>
@@ -572,6 +574,22 @@ export function Avaliacoes() {
   // 'Atendimento' (legado) incluído para que avaliações feitas antes da separação de sub-setores sejam contabilizadas
   const SETORES_OP = ['Cozinha', 'Cozinha - Checklist Semanal', 'Bar - Dia de Evento', 'Bar - Pré Preparo', 'Bar - Checklist Semanal', 'Atendimento', 'Atendimento - Maitres', 'Atendimento - Maitres Checklist', 'Atendimento - Pré evento']
 
+  // Mesmo filtro de visibilidade usado na seção Operacional (permissões + legado)
+  const setorVisivelUsuario = (ns: NotaSetor): boolean => {
+    if (!SETORES_OP.includes(ns.setor_nome)) return false
+    const isLegado = !ns.setor_nome.includes(' - ') && SETORES_OP.some((s) => s.startsWith(ns.setor_nome + ' - '))
+    if (isLegado && ns.nota === null) return false
+    return verTudo || setoresPermitidos.some((p) =>
+      p === ns.setor_nome ||
+      ns.setor_nome.startsWith(p + ' - ') ||
+      p.startsWith(ns.setor_nome + ' - ')
+    )
+  }
+
+  const resumoFuncoes = resumoFuncoesRede(
+    notasVisiveis.map((nu) => ({ notas_setores: nu.notas_setores.filter(setorVisivelUsuario) }))
+  )
+
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -599,22 +617,17 @@ export function Avaliacoes() {
       {loadOp ? <LoadingSpinner text="Carregando visitas..." /> : (
         <>
           {(verTudo || setoresPermitidos.length > 0) && (
+            <ResumoFuncoes funcoes={resumoFuncoes} titulo={verTudo ? 'Notas por função — rede' : 'Notas por função'} />
+          )}
+
+          {(verTudo || setoresPermitidos.length > 0) && (
           <SecaoColapsavel titulo="Operacional" meta="visitas/mês por setor">
             {notasVisiveis.map((nu) => {
               const metaUnidade = metaOperacional(nu.unidade_nome)
               const counts = sectorVisitCounts[nu.unidade_id] ?? {}
-              const setores = nu.notas_setores.filter((ns) => {
-                if (!SETORES_OP.includes(ns.setor_nome)) return false
-                // Setor legado (sem sub-setor): só exibe se houver respostas (nota não nula)
-                const isLegado = !ns.setor_nome.includes(' - ') && SETORES_OP.some((s) => s.startsWith(ns.setor_nome + ' - '))
-                if (isLegado && ns.nota === null) return false
-                return verTudo || setoresPermitidos.some((p) =>
-                  p === ns.setor_nome ||
-                  ns.setor_nome.startsWith(p + ' - ') ||
-                  // legado: setor antigo visível para quem tem sub-setor (ex: "Atendimento - Maitres")
-                  p.startsWith(ns.setor_nome + ' - ')
-                )
-              })
+              const setores = nu.notas_setores
+                .filter(setorVisivelUsuario)
+                .sort((a, b) => ordemFuncao(a.setor_nome) - ordemFuncao(b.setor_nome))
               return (
                 <div key={nu.unidade_id} className="px-4 py-3">
                   <div className="mb-2">
@@ -626,7 +639,7 @@ export function Avaliacoes() {
                       const meta = metaSetorOp(ns.setor_nome) ?? metaUnidade
                       return (
                         <div key={ns.setor_id} className="text-center bg-gray-50 rounded-lg py-1.5 px-1">
-                          <p className="text-xs text-gray-400 mb-0.5">{ns.setor_rotulo}</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{rotuloComGrupo(ns.setor_nome, ns.setor_rotulo)}</p>
                           <span className={`text-sm font-bold ${corClasse(ns.nota)}`}>{formatarNota(ns.nota)}</span>
                           <p className={`text-xs font-semibold mt-0.5 ${
                             meta === 0 ? 'text-gray-400'

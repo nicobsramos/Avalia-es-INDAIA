@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { LoadingSpinner } from './LoadingSpinner'
 import { corClasse, formatarNota, formatarMesAno } from '../utils/notas'
+import { agruparPorFuncao, rotuloComGrupo } from '../utils/funcoes'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 import type { NotaOperacao } from '../utils/sheetsParser'
 
@@ -92,7 +93,7 @@ async function buscarItensCriticosOp(
     })
     .map((r) => ({
       descricao: itemMap[r.item_id],
-      setor: setorMap[r.setor_id].rotulo,
+      setor: rotuloComGrupo(setorMap[r.setor_id].nome, setorMap[r.setor_id].rotulo),
       valor: r.valor as 1 | 2,
     }))
 }
@@ -116,7 +117,7 @@ export function UnidadeSugestoesModal(props: Props) {
     props.tipo === 'operacional'
       ? props.unidade.notas_setores
           .filter((ns) => isSectorVisible(ns.setor_nome, setoresFiltro ?? null))
-          .map((ns) => ({ nome: ns.setor_rotulo, nota: ns.nota }))
+          .map((ns) => ({ nome: rotuloComGrupo(ns.setor_nome, ns.setor_rotulo), nota: ns.nota }))
       : props.tipo === 'nutri'
       ? (['Cozinha', 'Bar', 'Atendimento'] as const)
           .filter((a) => setoresFiltro === null || setoresFiltro.includes(a))
@@ -129,6 +130,7 @@ export function UnidadeSugestoesModal(props: Props) {
       ? props.unidade.notas_setores.filter((ns) => isSectorVisible(ns.setor_nome, setoresFiltro ?? null))
       : []
   const combinadoNotaOp = avgNulls(combinadoSetoresOp.map((ns) => ns.nota))
+  const combinadoFuncoes = agruparPorFuncao(combinadoSetoresOp)
 
   useEffect(() => {
     async function run() {
@@ -147,7 +149,7 @@ export function UnidadeSugestoesModal(props: Props) {
             unidade: nome,
             competencia: formatarMesAno(competencia.mes, competencia.ano),
             tipo: 'combinado',
-            operacional: combinadoSetoresOp.map((ns) => ({ nome: ns.setor_rotulo, nota: ns.nota })),
+            operacional: combinadoSetoresOp.map((ns) => ({ nome: rotuloComGrupo(ns.setor_nome, ns.setor_rotulo), nota: ns.nota })),
             itensCriticos: itens,
             nutri: props.notaNutri,
             checklist: props.temChecklist
@@ -234,12 +236,20 @@ export function UnidadeSugestoesModal(props: Props) {
               <span className={`text-sm font-bold ${corClasse(combinadoNotaOp)}`}>
                 {formatarNota(combinadoNotaOp)}
               </span>
-              {combinadoSetoresOp.length > 1 && (
-                <div className="mt-1 space-y-0.5">
-                  {combinadoSetoresOp.map((ns) => (
-                    <div key={ns.setor_id} className="text-center">
-                      <span className="text-[9px] text-gray-400">{ns.setor_rotulo} </span>
-                      <span className={`text-[9px] font-semibold ${corClasse(ns.nota)}`}>{formatarNota(ns.nota)}</span>
+              {combinadoFuncoes.length > 0 && (combinadoFuncoes.length > 1 || combinadoFuncoes[0].setores.length > 1) && (
+                <div className="mt-1 space-y-1">
+                  {combinadoFuncoes.map((f) => (
+                    <div key={f.key} className="text-center">
+                      <div>
+                        <span className="text-[9px] text-gray-500 font-semibold">{f.label} </span>
+                        <span className={`text-[9px] font-bold ${corClasse(f.nota)}`}>{formatarNota(f.nota)}</span>
+                      </div>
+                      {f.setores.length > 1 && f.setores.map((ns) => (
+                        <div key={ns.setor_id}>
+                          <span className="text-[9px] text-gray-400">{ns.setor_rotulo} </span>
+                          <span className={`text-[9px] font-semibold ${corClasse(ns.nota)}`}>{formatarNota(ns.nota)}</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

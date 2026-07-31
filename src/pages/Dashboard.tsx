@@ -9,7 +9,9 @@ const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 import { CompetenciaSeletor } from '../components/CompetenciaSeletor'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
+import { ResumoFuncoes } from '../components/ResumoFuncoes'
 import { bgCorClasse, corClasse, formatarNota } from '../utils/notas'
+import { agruparPorFuncao, resumoFuncoesRede } from '../utils/funcoes'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 
 function avgNulls(arr: (number | null)[]): number | null {
@@ -82,6 +84,7 @@ function CardUnificado({
   onClick: () => void
 }) {
   const { nu, notaOp, notaNutri, checkAbr, checkFech, checkEsperado, setoresOp, temChecklist } = item
+  const funcoesOp = agruparPorFuncao(setoresOp)
   const sufixo = nu.unidade_nome.includes(' – ')
     ? nu.unidade_nome.split(' – ').slice(1).join(' – ')
     : nu.unidade_nome
@@ -99,16 +102,24 @@ function CardUnificado({
       </div>
 
       <div className={`grid ${mostraChecklist ? 'grid-cols-3' : 'grid-cols-2'} gap-2 border-t border-gray-100 pt-3`}>
-        {/* Operacional */}
+        {/* Operacional — agrupado por função (Cozinha / Maitres / Pré evento / Bar) */}
         <div>
           <p className="text-[10px] text-gray-400 mb-0.5 text-center">Operacional</p>
           <p className={`text-sm font-bold text-center ${corClasse(notaOp)}`}>{formatarNota(notaOp)}</p>
-          {setoresOp.length > 1 && (
-            <div className="mt-1 space-y-0.5">
-              {setoresOp.map((ns) => (
-                <div key={ns.setor_id} className="flex justify-between text-[9px]">
-                  <span className="text-gray-400">{ns.setor_rotulo}</span>
-                  <span className={corClasse(ns.nota)}>{formatarNota(ns.nota)}</span>
+          {funcoesOp.length > 0 && (funcoesOp.length > 1 || funcoesOp[0].setores.length > 1) && (
+            <div className="mt-1 space-y-1">
+              {funcoesOp.map((f) => (
+                <div key={f.key}>
+                  <div className="flex justify-between gap-1 text-[9px] font-semibold">
+                    <span className="text-gray-500 truncate">{f.label}</span>
+                    <span className={corClasse(f.nota)}>{formatarNota(f.nota)}</span>
+                  </div>
+                  {f.setores.length > 1 && f.setores.map((ns) => (
+                    <div key={ns.setor_id} className="flex justify-between gap-1 pl-2 text-[9px]">
+                      <span className="text-gray-400 truncate">{ns.setor_rotulo}</span>
+                      <span className={corClasse(ns.nota)}>{formatarNota(ns.nota)}</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -195,6 +206,11 @@ export function Dashboard() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   }, [unidadesDash])
 
+  const resumoFuncoes = useMemo(
+    () => resumoFuncoesRede(unidadesDash.map((i) => ({ notas_setores: i.setoresOp }))),
+    [unidadesDash],
+  )
+
   return (
     <div className="px-4 py-6 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -214,6 +230,7 @@ export function Dashboard() {
         </div>
       ) : (
         <div className="space-y-8">
+          <ResumoFuncoes funcoes={resumoFuncoes} titulo={verTudo ? 'Notas por função — rede' : 'Notas por função'} />
           {unidadesPorCidade.map(([cidade, items]) => (
             <section key={cidade}>
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{cidade}</h3>
