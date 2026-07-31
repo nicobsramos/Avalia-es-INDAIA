@@ -47,6 +47,54 @@ export interface FuncaoNotas {
   setores: NotaSetor[]
 }
 
+// Item genérico de nota rotulada (usado pelas faixas de resumo)
+export interface NotaRotulada {
+  key: string
+  label: string
+  nota: number | null
+}
+
+// ── Seg. Alimentar & 5S ───────────────────────────────────────────────────────
+// A avaliação da nutri é separada por área; o dashboard mostrava só o consolidado.
+export const AREAS_NUTRI = ['Cozinha', 'Bar', 'Atendimento'] as const
+export type AreaNutri = typeof AREAS_NUTRI[number]
+export type LinhaNutri = Record<AreaNutri, number | null>
+
+// Converte setores granulares ('Bar - Pré Preparo') nos grupos base ('Bar'),
+// que são a taxonomia usada pela nutri.
+export function gruposBase(setoresAvaliacao: string[]): string[] {
+  const r = new Set<string>()
+  for (const s of setoresAvaliacao) {
+    if (s.startsWith('Cozinha')) r.add('Cozinha')
+    else if (s.startsWith('Bar')) r.add('Bar')
+    else if (s.startsWith('Atendimento')) r.add('Atendimento')
+  }
+  return [...r]
+}
+
+// Notas nutri por área de UMA unidade (só as áreas com nota e permitidas).
+export function areasNutriUnidade(row: LinhaNutri | undefined, filtro: string[] | null): NotaRotulada[] {
+  if (!row) return []
+  return AREAS_NUTRI
+    .filter((a) => filtro === null || filtro.includes(a))
+    .map((a) => ({ key: a, label: a, nota: row[a] }))
+    .filter((x) => x.nota !== null)
+}
+
+// Resumo da rede por área nutri: média entre unidades que têm nota na área.
+export function resumoAreasNutriRede(linhas: NotaRotulada[][]): NotaRotulada[] {
+  const acc: Record<string, number[]> = {}
+  for (const linha of linhas) {
+    for (const a of linha) {
+      if (a.nota === null) continue
+      ;(acc[a.key] ??= []).push(a.nota)
+    }
+  }
+  return AREAS_NUTRI
+    .filter((a) => acc[a]?.length)
+    .map((a) => ({ key: a, label: a, nota: acc[a].reduce((x, y) => x + y, 0) / acc[a].length }))
+}
+
 // Agrupa as notas de setor de UMA unidade por função.
 // Nota da função = média simples dos setores com nota.
 // Só retorna funções que têm ao menos um setor presente na lista.

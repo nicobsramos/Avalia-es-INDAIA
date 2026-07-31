@@ -21,6 +21,7 @@ interface SugestoesBodyCombinado {
   operacional: { nome: string; nota: number | null }[]
   itensCriticos?: ItemCritico[]
   nutri: number | null
+  nutriAreas?: { nome: string; nota: number | null }[]
   checklist: { abertura: number; fechamento: number; esperado: number } | null
 }
 
@@ -35,7 +36,7 @@ export default async function handler(req: any, res: any) {
   let prompt: string
 
   if (body.tipo === 'combinado') {
-    const { unidade, competencia, operacional, itensCriticos = [], nutri, checklist } = body
+    const { unidade, competencia, operacional, itensCriticos = [], nutri, nutriAreas = [], checklist } = body
 
     const opTexto =
       operacional
@@ -51,7 +52,14 @@ export default async function handler(req: any, res: any) {
             .join('\n')
         : ''
 
-    const nutriTexto = nutri !== null ? `${nutri.toFixed(1)}%` : 'Sem avaliação neste período'
+    const areasComNota = nutriAreas.filter((a) => a.nota !== null)
+    const nutriTexto =
+      nutri !== null
+        ? `${nutri.toFixed(1)}%` +
+          (areasComNota.length > 0
+            ? `\n` + areasComNota.map((a) => `• ${a.nome}: ${a.nota!.toFixed(1)}%`).join('\n')
+            : '')
+        : 'Sem avaliação neste período'
 
     const checklistTexto = checklist
       ? `Abertura: ${checklist.abertura}/${checklist.esperado} dias | Fechamento: ${checklist.fechamento}/${checklist.esperado} dias`

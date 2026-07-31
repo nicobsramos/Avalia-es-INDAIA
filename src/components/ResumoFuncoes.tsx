@@ -1,8 +1,8 @@
 import { corClasse, formatarNota } from '../utils/notas'
-import type { FuncaoNotas } from '../utils/funcoes'
+import type { NotaRotulada } from '../utils/funcoes'
 
 interface Props {
-  funcoes: FuncaoNotas[]
+  funcoes: NotaRotulada[]
   titulo?: string
 }
 

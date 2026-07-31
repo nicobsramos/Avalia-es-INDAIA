@@ -11,7 +11,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner'
 import { UnidadeSugestoesModal } from '../components/UnidadeSugestoesModal'
 import { ResumoFuncoes } from '../components/ResumoFuncoes'
 import { bgCorClasse, corClasse, formatarNota } from '../utils/notas'
-import { agruparPorFuncao, resumoFuncoesRede } from '../utils/funcoes'
+import { agruparPorFuncao, resumoFuncoesRede, areasNutriUnidade, resumoAreasNutriRede, type NotaRotulada } from '../utils/funcoes'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 
 function avgNulls(arr: (number | null)[]): number | null {
@@ -68,6 +68,7 @@ interface UnidadeDashItem {
   notaOp: number | null
   setoresOp: NotaSetor[]
   notaNutri: number | null
+  nutriAreas: NotaRotulada[]
   checkAbr: number
   checkFech: number
   checkEsperado: number
@@ -83,7 +84,7 @@ function CardUnificado({
   mostraChecklist: boolean
   onClick: () => void
 }) {
-  const { nu, notaOp, notaNutri, checkAbr, checkFech, checkEsperado, setoresOp, temChecklist } = item
+  const { nu, notaOp, notaNutri, nutriAreas, checkAbr, checkFech, checkEsperado, setoresOp, temChecklist } = item
   const funcoesOp = agruparPorFuncao(setoresOp)
   const sufixo = nu.unidade_nome.includes(' – ')
     ? nu.unidade_nome.split(' – ').slice(1).join(' – ')
@@ -126,10 +127,20 @@ function CardUnificado({
           )}
         </div>
 
-        {/* Seg. Alimentar */}
-        <div className="text-center">
-          <p className="text-[10px] text-gray-400 mb-0.5">Seg. Alim.</p>
-          <p className={`text-sm font-bold ${corClasse(notaNutri)}`}>{formatarNota(notaNutri)}</p>
+        {/* Seg. Alimentar — quebrado por área (a avaliação da nutri separa) */}
+        <div>
+          <p className="text-[10px] text-gray-400 mb-0.5 text-center">Seg. Alim.</p>
+          <p className={`text-sm font-bold text-center ${corClasse(notaNutri)}`}>{formatarNota(notaNutri)}</p>
+          {nutriAreas.length > 1 && (
+            <div className="mt-1 space-y-0.5">
+              {nutriAreas.map((a) => (
+                <div key={a.key} className="flex justify-between gap-1 text-[9px]">
+                  <span className="text-gray-400 truncate">{a.label}</span>
+                  <span className={corClasse(a.nota)}>{formatarNota(a.nota)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Checklist */}
@@ -188,6 +199,7 @@ export function Dashboard() {
           notaOp: hasOp ? avgNulls(setoresVisiveis.map((ns) => ns.nota)) : null,
           setoresOp: setoresVisiveis,
           notaNutri: nutriUnit?.consolidado ?? null,
+          nutriAreas: areasNutriUnidade(nutriUnit, setoresDashEff),
           checkAbr: checkUnit?.abertura ?? 0,
           checkFech: checkUnit?.fechamento ?? 0,
           checkEsperado: checkUnit?.dias_operacao_semana ?? 6,
@@ -211,6 +223,11 @@ export function Dashboard() {
     [unidadesDash],
   )
 
+  const resumoNutri = useMemo(
+    () => resumoAreasNutriRede(unidadesDash.map((i) => i.nutriAreas)),
+    [unidadesDash],
+  )
+
   return (
     <div className="px-4 py-6 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -230,7 +247,8 @@ export function Dashboard() {
         </div>
       ) : (
         <div className="space-y-8">
-          <ResumoFuncoes funcoes={resumoFuncoes} titulo={verTudo ? 'Notas por função — rede' : 'Notas por função'} />
+          <ResumoFuncoes funcoes={resumoFuncoes} titulo={`Operacional por função${verTudo ? ' — rede' : ''}`} />
+          <ResumoFuncoes funcoes={resumoNutri} titulo={`Seg. Alimentar & 5S por setor${verTudo ? ' — rede' : ''}`} />
           {unidadesPorCidade.map(([cidade, items]) => (
             <section key={cidade}>
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{cidade}</h3>
@@ -254,6 +272,7 @@ export function Dashboard() {
           tipo="combinado"
           unidade={modal.nu}
           notaNutri={modal.notaNutri}
+          nutriAreas={modal.nutriAreas}
           checkAbr={modal.checkAbr}
           checkFech={modal.checkFech}
           checkEsperado={modal.checkEsperado}

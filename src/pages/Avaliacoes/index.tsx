@@ -8,7 +8,8 @@ import { useAuth } from '../../context/AuthContext'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { corClasse, formatarNota, formatarCompetencia, competenciaAtual } from '../../utils/notas'
 import { DB_TO_SHEET, metaOperacional, metaNutri, metaSetorOp } from '../../utils/unidades'
-import { ordemFuncao, rotuloComGrupo, resumoFuncoesRede } from '../../utils/funcoes'
+import { ordemFuncao, rotuloComGrupo, resumoFuncoesRede, areasNutriUnidade, resumoAreasNutriRede } from '../../utils/funcoes'
+import { useNutriReport } from '../../hooks/useNutriAvaliacoes'
 import { ResumoFuncoes } from '../../components/ResumoFuncoes'
 import { useCompetenciasDisponiveis } from '../../hooks/useCompetenciasDisponiveis'
 import type { Competencia, NotaSetor } from '../../types'
@@ -543,6 +544,7 @@ export function Avaliacoes() {
 
   const { notasUnidades, sectorVisitCounts, loading: loadOp } = useDashboard(competencia, unidadeIdsPermitidas)
   const { data: nutriCounts = {} } = useNutriCounts(competencia)
+  const { data: dbNutri } = useNutriReport(competencia, unidadeIdsPermitidas)
   const { rows: sheetsRows } = useSegAlimentar(competencia)
 
   const notasVisiveis = unidadeIdsPermitidas
@@ -590,6 +592,13 @@ export function Avaliacoes() {
     notasVisiveis.map((nu) => ({ notas_setores: nu.notas_setores.filter(setorVisivelUsuario) }))
   )
 
+  // Seg. Alimentar por setor — a nutri separa Cozinha/Bar/Atendimento
+  const resumoNutriAreas = resumoAreasNutriRede(
+    notasVisiveis.map((nu) =>
+      areasNutriUnidade((dbNutri ?? []).find((d) => d.unidade_id === nu.unidade_id), null)
+    )
+  )
+
   return (
     <div className="px-4 py-6 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -617,7 +626,11 @@ export function Avaliacoes() {
       {loadOp ? <LoadingSpinner text="Carregando visitas..." /> : (
         <>
           {(verTudo || setoresPermitidos.length > 0) && (
-            <ResumoFuncoes funcoes={resumoFuncoes} titulo={verTudo ? 'Notas por função — rede' : 'Notas por função'} />
+            <ResumoFuncoes funcoes={resumoFuncoes} titulo={`Operacional por função${verTudo ? ' — rede' : ''}`} />
+          )}
+
+          {(verTudo || podeNutri) && (
+            <ResumoFuncoes funcoes={resumoNutriAreas} titulo={`Seg. Alimentar & 5S por setor${verTudo ? ' — rede' : ''}`} />
           )}
 
           {(verTudo || setoresPermitidos.length > 0) && (

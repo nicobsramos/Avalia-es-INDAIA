@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { LoadingSpinner } from './LoadingSpinner'
 import { corClasse, formatarNota, formatarMesAno } from '../utils/notas'
-import { agruparPorFuncao, rotuloComGrupo } from '../utils/funcoes'
+import { agruparPorFuncao, rotuloComGrupo, type NotaRotulada } from '../utils/funcoes'
 import type { NotaUnidade, NotaSetor, Competencia } from '../types'
 import type { NotaOperacao } from '../utils/sheetsParser'
 
@@ -39,6 +39,7 @@ interface PropsCombinado extends BaseProps {
   tipo: 'combinado'
   unidade: NotaUnidade
   notaNutri: number | null
+  nutriAreas?: NotaRotulada[]
   checkAbr: number
   checkFech: number
   checkEsperado: number
@@ -152,6 +153,7 @@ export function UnidadeSugestoesModal(props: Props) {
             operacional: combinadoSetoresOp.map((ns) => ({ nome: rotuloComGrupo(ns.setor_nome, ns.setor_rotulo), nota: ns.nota })),
             itensCriticos: itens,
             nutri: props.notaNutri,
+            nutriAreas: (props.nutriAreas ?? []).map((a) => ({ nome: a.label, nota: a.nota })),
             checklist: props.temChecklist
               ? { abertura: props.checkAbr, fechamento: props.checkFech, esperado: props.checkEsperado }
               : null,
@@ -255,12 +257,22 @@ export function UnidadeSugestoesModal(props: Props) {
                 </div>
               )}
             </div>
-            {/* Seg. Alimentar */}
+            {/* Seg. Alimentar — por setor (Cozinha / Bar / Atendimento) */}
             <div className="text-center bg-gray-50 rounded-xl py-2.5 px-1">
               <p className="text-[10px] text-gray-400 mb-0.5">Seg. Alim.</p>
               <span className={`text-sm font-bold ${corClasse(props.notaNutri)}`}>
                 {formatarNota(props.notaNutri)}
               </span>
+              {(props.nutriAreas?.length ?? 0) > 1 && (
+                <div className="mt-1 space-y-0.5">
+                  {props.nutriAreas!.map((a) => (
+                    <div key={a.key}>
+                      <span className="text-[9px] text-gray-400">{a.label} </span>
+                      <span className={`text-[9px] font-semibold ${corClasse(a.nota)}`}>{formatarNota(a.nota)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             {/* Checklist */}
             <div className="text-center bg-gray-50 rounded-xl py-2.5 px-1">
