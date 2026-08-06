@@ -9,9 +9,9 @@ const ADMIN_EMAIL = 'n.ramos.indaia@gmail.com'
 const GESTORES_CHECKLIST = new Set([ADMIN_EMAIL, 'flaviavo05@gmail.com', 'laisalves.indaia@gmail.com', 'k.guatelli.indaia@gmail.com', 'g.bueno.indaia@gmail.com'])
 
 // Usuários que só visualizam histórico — não preenchem checklists
+// (Laís liberada para preencher/testar abertura e fechamento)
 const APENAS_HISTORICO = new Set([
   'n.ramos.indaia@gmail.com',
-  'laisalves.indaia@gmail.com',
   'k.guatelli.indaia@gmail.com',
   'g.bueno.indaia@gmail.com',
 ])

@@ -54,13 +54,19 @@ export function NovoChecklist() {
   const [eventoTipo, setEventoTipo] = useState<'evento' | 'sem_evento' | null>(null)
   // Data de operação livre — padrão hoje, editável (pode escolher o dia anterior)
   const [dataOperacao, setDataOperacao] = useState(hojeISO)
+  // Setor do checklist — só é escolhido quando o usuário tem mais de um
+  const [setorEscolhido, setSetorEscolhido] = useState<string | null>(null)
 
   const checklistSetores = toChecklistSetores(perfil?.setores_avaliacao ?? [])
   const verTudo = perfil?.ver_tudo === true
   const isGestor = verTudo || ['n.ramos.indaia@gmail.com', 'flaviavo05@gmail.com'].includes(user?.email ?? '')
   const unidadeIds = verTudo ? null : (perfil?.unidades_ids ?? null)
 
-  const isAtendimento = checklistSetores.includes('Atendimento')
+  // Setor único = seleciona sozinho; vários = usuário escolhe; nenhum (ver_tudo) = null
+  const precisaEscolherSetor = checklistSetores.length > 1
+  const setorAtivo = checklistSetores.length === 1 ? checklistSetores[0] : setorEscolhido
+
+  const isAtendimento = setorAtivo === 'Atendimento'
   // Tipos disponíveis: Pré-evento (dia de evento) só para Atendimento
   const tiposDisponiveis: Array<'abertura' | 'fechamento' | 'pre_evento'> = isAtendimento
     ? ['abertura', 'fechamento', 'pre_evento']
@@ -71,21 +77,24 @@ export function NovoChecklist() {
     ? 'Atendimento'
     : isAtendimentoAbertura
       ? (eventoTipo === 'evento' ? 'Atendimento - Evento' : eventoTipo === 'sem_evento' ? 'Atendimento - Sem Evento' : null)
-      : (checklistSetores[0] ?? null)
+      : setorAtivo
 
   const { data: unidades, isLoading: loadUnidades } = useUnidades(unidadeIds ?? undefined)
   // Para Atendimento abertura: [] enquanto sem escolha (retorna nada); setor específico após escolha
+  // Array vazio = nada carregado (usuário multi-setor ainda sem escolher); undefined = sem filtro (ver_tudo)
   const itensFilter = tipo === 'pre_evento'
     ? ['Atendimento']
     : isAtendimentoAbertura
       ? (effectiveSetor ? [effectiveSetor] : [])
-      : (checklistSetores.length > 0 ? checklistSetores : undefined)
+      : setorAtivo
+        ? [setorAtivo]
+        : (checklistSetores.length > 0 ? [] : undefined)
   const { data: itens, isLoading: loadItens } = useChecklistItens(tipo, itensFilter)
   const { data: existente, isLoading: loadExistente } = useChecklistExistente(
     unidadeId || undefined,
     tipo,
     dataOperacao,
-    tipo === 'pre_evento' ? 'Atendimento' : (checklistSetores[0] ?? null),
+    tipo === 'pre_evento' ? 'Atendimento' : setorAtivo,
   )
   const salvar = useSalvarChecklist()
 
@@ -98,11 +107,11 @@ export function NovoChecklist() {
     if (unidades?.length === 1 && !unidadeId) setUnidadeId(unidades[0].id)
   }, [unidades, unidadeId])
 
-  // Quando muda tipo, reseta itens e escolha de evento
+  // Quando muda tipo ou setor, reseta itens e escolha de evento
   useEffect(() => {
     setItensState({})
     setEventoTipo(null)
-  }, [tipo])
+  }, [tipo, setorEscolhido])
 
   // Se existente foi carregado e tem dados, pre-carregar respostas
   // (para edição do mesmo autor)
@@ -237,6 +246,32 @@ export function NovoChecklist() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+          {/* Setor — só quando o usuário responde por mais de um */}
+          {precisaEscolherSetor && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Setor</label>
+              <div className={`grid gap-2 ${checklistSetores.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                {checklistSetores.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSetorEscolhido(s)}
+                    className={`py-3 rounded-lg text-xs sm:text-sm font-semibold border-2 transition-all ${
+                      setorEscolhido === s
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              {!setorEscolhido && (
+                <p className="text-xs text-gray-400 mt-1">Escolha o setor deste checklist.</p>
+              )}
+            </div>
+          )}
+
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
@@ -358,7 +393,7 @@ export function NovoChecklist() {
         </div>
 
         <button
-          disabled={!unidadeId || !responsavel.trim() || loadExistente || (isAtendimentoAbertura && !eventoTipo) || (!!existente && !podeEditar)}
+          disabled={!unidadeId || !responsavel.trim() || loadExistente || (precisaEscolherSetor && !setorEscolhido) || (isAtendimentoAbertura && !eventoTipo) || (!!existente && !podeEditar)}
           onClick={() => setPasso(2)}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
@@ -411,7 +446,7 @@ export function NovoChecklist() {
           </div>
         ) : (
           secoes.map((secao) => {
-            const mostrarBotaoNA = secao.titulo === 'Verificações' && checklistSetores.includes('Atendimento')
+            const mostrarBotaoNA = secao.titulo === 'Verificações' && isAtendimento
             return (
             <div key={secao.titulo} className="space-y-2">
               <div className="flex items-center gap-2 py-1">
