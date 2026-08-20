@@ -15,8 +15,6 @@ import { SegAlimentar5S } from './pages/SegAlimentar5S'
 import { NovaAvaliacaoNutri } from './pages/SegAlimentar5S/NovaAvaliacaoNutri'
 import { DetalheAvaliacaoNutri } from './pages/SegAlimentar5S/DetalheAvaliacaoNutri'
 import { ChecklistDiario } from './pages/ChecklistDiario'
-import { NovoChecklist } from './pages/ChecklistDiario/NovoChecklist'
-import { DetalheChecklist } from './pages/ChecklistDiario/DetalheChecklist'
 import { Orcamento } from './pages/Orcamento'
 import { Acessos } from './pages/Acessos'
 import { LoadingSpinner } from './components/LoadingSpinner'
@@ -68,9 +66,10 @@ function AppRoutes() {
           <Route path="avaliacoes" element={<Avaliacoes />} />
           <Route path="avaliacoes/nova" element={<SoEscrita><NovaAvaliacao /></SoEscrita>} />
           <Route path="avaliacoes/:id" element={<DetalheAvaliacao />} />
+          {/* Checklists migraram para sistema.eventosindaia.com.br — a tela virou
+              aviso e as rotas antigas (links salvos, histórico do navegador) caem nela */}
           <Route path="checklist-diario" element={<ChecklistDiario />} />
-          <Route path="checklist-diario/novo" element={<NovoChecklist />} />
-          <Route path="checklist-diario/:id" element={<DetalheChecklist />} />
+          <Route path="checklist-diario/*" element={<Navigate to="/checklist-diario" replace />} />
           {user?.email !== JULIA_EMAIL && (perfil?.pode_orcamento === true || perfil?.ver_tudo === true || user?.email === ADMIN_EMAIL) && (
             <Route path="orcamento" element={<Orcamento />} />
           )}
